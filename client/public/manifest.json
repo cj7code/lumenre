@@ -1,0 +1,8 @@
+{
+  "short_name": "Lumenre",
+  "name": "Lumenre Nursing Learning",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f766e"
+}
