@@ -32,7 +32,7 @@ export default function AdminDashboard() {
 
   const fetchDrafts = async () => {
     try {
-      const res = await axios.get("/api/admin/drafts", {
+      const res = await axios.get("/admin/drafts", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
     setLoading(true);
 
     try {
-      await axios.post("/api/admin/drafts", formData, {
+      await axios.post("/admin/drafts", formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "multipart/form-data",
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
   // ----------------------------------------------------------
   const publishDraft = async (draftId) => {
     try {
-      await axios.post(`/api/admin/drafts/${draftId}/publish`, {}, {
+      await axios.post(`/admin/drafts/${draftId}/publish`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
     formData.append("file", file);
 
     try {
-      await axios.post(`/api/admin/modules/${selectedModule}/upload`, formData, {
+      await axios.post(`/admin/modules/${selectedModule}/upload`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "multipart/form-data",
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
   // ----------------------------------------------------------
   const loadModuleFiles = async (modId) => {
     try {
-      const res = await axios.get(`/api/admin/modules/${modId}/files`, {
+      const res = await axios.get(`/admin/modules/${modId}/files`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 

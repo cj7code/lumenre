@@ -3,22 +3,18 @@ import axios from "axios";
 
 /* 
   -----------------------------------------------
-  🌍 Automatic API URL Switching (Local + Vercel)
+  🌍 Automatic API URL Switching (Local + Render)
   -----------------------------------------------
-  - When running locally (npm run dev):
-        → Uses http://localhost:5000/api
-  - When deployed on Vercel:
-        → Uses VITE_API_URL/api
-  - No manual changing required.
+  - Local dev → http://localhost:5000/api
+  - Production → VITE_API_URL/api
 */
-const baseURL =
-  import.meta.env.PROD
-    ? import.meta.env.VITE_API_URL                      // Production backend URL (from Vercel env vars)
-    : "http://localhost:5000";                          // Local backend during development
+const baseURL = import.meta.env.PROD
+  ? import.meta.env.VITE_API_URL      // e.g. https://lumenre.onrender.com
+  : "http://localhost:5000";          // local backend
 
-// Create axios instance
+// Create axios instance using the computed baseURL
 const api = axios.create({
-  baseURL: baseURL + "/api",
+  baseURL: import.meta.env.VITE_API_URL,          // 👈 Always correct
   timeout: 10000,
 });
 

@@ -1,148 +1,285 @@
 // ------------------------------------------------------------
-// AdminUploads.jsx — Admin + Tutor Module File Manager
-// ------------------------------------------------------------
-// Backend endpoints used:
-// POST   /api/admin/modules/:moduleId/upload
-// GET    /api/admin/modules/:moduleId/files
-// DELETE /api/admin/modules/:moduleId/files/:publicId
+// AdminDashboard.jsx
+// Full admin panel: 
+// - AI generation (notes, quizzes, slides)
+// - Direct file uploads per module
+// - Manage drafts
+// - Admin navigation shortcuts
 // ------------------------------------------------------------
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "../api";
 
-export default function AdminUploads() {
+export default function AdminDashboard() {
+  // ------------------------ STATES --------------------------
+  const [title, setTitle] = useState("");
   const [moduleId, setModuleId] = useState("");
+  const [rawContent, setRawContent] = useState("");
   const [file, setFile] = useState(null);
-  const [files, setFiles] = useState([]);
+
+  const [drafts, setDrafts] = useState([]);
+  const [moduleFiles, setModuleFiles] = useState([]);
+  const [selectedModule, setSelectedModule] = useState("");
+
+  const [loading, setLoading] = useState(false);
 
   // ----------------------------------------------------------
-  // Load all uploaded files for the module
+  // Fetch drafts on load
   // ----------------------------------------------------------
-  const loadFiles = async () => {
-    if (!moduleId) return alert("Enter a Module ID first.");
+  useEffect(() => {
+    fetchDrafts();
+  }, []);
 
+  const fetchDrafts = async () => {
     try {
-      const res = await axios.get(`/api/admin/modules/${moduleId}/files`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      const res = await axios.get("/admin/drafts", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
-      setFiles(res.data || []);
+      setDrafts(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
-      alert("Failed to load files for this module.");
+      alert("Failed to load drafts");
     }
   };
 
   // ----------------------------------------------------------
-  // Upload file (PDF, PPTX, JPG, DOCX...)
+  // AI Draft Upload (raw text or file)
   // ----------------------------------------------------------
-  const uploadFile = async () => {
-    if (!moduleId || !file) return alert("Select file AND enter a module ID.");
+  const submitAIDraft = async (e) => {
+    e.preventDefault();
+    if (!title) return alert("Title is required");
 
-    const fd = new FormData();
-    fd.append("file", file);
+    const formData = new FormData();
+    formData.append("title", title);
+    if (moduleId) formData.append("moduleId", moduleId);
+    if (rawContent) formData.append("rawContent", rawContent);
+    if (file) formData.append("file", file);
+
+    setLoading(true);
 
     try {
-      await axios.post(`/api/admin/modules/${moduleId}/upload`, fd, {
+      await axios.post("/admin/drafts", formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "multipart/form-data"
-        }
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      alert("Upload successful!");
-      loadFiles();
+      alert("Draft created and AI content generated!");
+      setTitle("");
+      setRawContent("");
+      setFile(null);
+
+      fetchDrafts();
     } catch (err) {
       console.error(err);
-      alert("File upload failed.");
+      alert("AI draft upload failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   // ----------------------------------------------------------
-  // Delete uploaded file
+  // Publish Draft
   // ----------------------------------------------------------
-  const removeFile = async (publicId) => {
-    if (!window.confirm("Delete this file permanently?")) return;
+  const publishDraft = async (draftId) => {
+    try {
+      await axios.post(`/admin/drafts/${draftId}/publish`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+
+      alert("Draft published!");
+      fetchDrafts();
+    } catch (err) {
+      console.error(err);
+      alert("Publish failed");
+    }
+  };
+
+  // ----------------------------------------------------------
+  // Module File Upload (PDF, PPTX, DOCX, JPG, etc.)
+  // ----------------------------------------------------------
+  const uploadModuleFile = async () => {
+    if (!selectedModule || !file) return alert("Select module and file!");
+
+    const formData = new FormData();
+    formData.append("file", file);
 
     try {
-      await axios.delete(`/api/admin/modules/${moduleId}/files/${publicId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      await axios.post(`/admin/modules/${selectedModule}/upload`, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      alert("File deleted.");
-      loadFiles();
+      alert("File uploaded!");
+      loadModuleFiles(selectedModule);
     } catch (err) {
       console.error(err);
-      alert("Delete failed.");
+      alert("Upload failed");
     }
   };
 
   // ----------------------------------------------------------
-  // RENDER COMPONENT
+  // List module files
+  // ----------------------------------------------------------
+  const loadModuleFiles = async (modId) => {
+    try {
+      const res = await axios.get(`/admin/modules/${modId}/files`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+
+      setModuleFiles(res.data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load module files");
+    }
+  };
+
+  // ----------------------------------------------------------
+  // RENDER DASHBOARD
   // ----------------------------------------------------------
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-4">Admin File Manager</h1>
+    <div className="max-w-6xl mx-auto p-6 space-y-10">
 
-      {/* Module & File Upload */}
-      <div className="p-5 bg-white shadow rounded space-y-4">
-        <input
-          className="border p-2 rounded w-full"
-          placeholder="Enter Module ID (e.g. 675fbdbf6c1...)"
-          value={moduleId}
-          onChange={(e) => setModuleId(e.target.value)}
-        />
+      {/* ---------------------------------------------------- */}
+      {/* ADMIN NAVIGATION SHORTCUTS                          */}
+      {/* ---------------------------------------------------- */}
+      <div className="flex gap-3 mb-6">
+        <button
+          onClick={() => (window.location.href = "/admin")}
+          className="px-4 py-2 bg-primary text-white rounded shadow hover:bg-teal-700"
+        >
+          Drafts
+        </button>
 
-        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+        <button
+          onClick={() => (window.location.href = "/admin/users")}
+          className="px-4 py-2 bg-primary text-white rounded shadow hover:bg-teal-700"
+        >
+          Manage Users
+        </button>
 
-        <div className="flex gap-3 mt-2">
+        <button
+          onClick={() => (window.location.href = "/admin/uploads")}
+          className="px-4 py-2 bg-primary text-white rounded shadow hover:bg-teal-700"
+        >
+          Uploads
+        </button>
+      </div>
+
+      {/* ---------------------------------------------------- */}
+      {/* AI GENERATION SECTION                                */}
+      {/* ---------------------------------------------------- */}
+      <section className="p-6 bg-white rounded shadow">
+        <h2 className="text-2xl font-bold mb-4">AI Content Generator</h2>
+
+        <form onSubmit={submitAIDraft} className="space-y-3">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Draft title"
+            className="w-full border p-2 rounded"
+          />
+
+          <input
+            value={moduleId}
+            onChange={(e) => setModuleId(e.target.value)}
+            placeholder="Module ID (optional)"
+            className="w-full border p-2 rounded"
+          />
+
+          <textarea
+            value={rawContent}
+            onChange={(e) => setRawContent(e.target.value)}
+            placeholder="Paste raw content for AI"
+            className="w-full border p-2 rounded h-32"
+          />
+
+          <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+
           <button
-            onClick={uploadFile}
-            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/80"
+            type="submit"
+            disabled={loading}
+            className="bg-primary text-white px-4 py-2 rounded"
+          >
+            {loading ? "Generating..." : "Upload & Generate"}
+          </button>
+        </form>
+      </section>
+
+      {/* ---------------------------------------------------- */}
+      {/* DIRECT FILE UPLOAD SECTION                           */}
+      {/* ---------------------------------------------------- */}
+      <section className="p-6 bg-white rounded shadow">
+        <h2 className="text-2xl font-bold mb-4">Direct File Upload</h2>
+
+        <div className="space-y-3">
+          <input
+            value={selectedModule}
+            onChange={(e) => setSelectedModule(e.target.value)}
+            placeholder="Module ID"
+            className="w-full border p-2 rounded"
+          />
+
+          <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+
+          <button
+            onClick={uploadModuleFile}
+            className="bg-teal-600 text-white px-4 py-2 rounded"
           >
             Upload File
           </button>
-
-          <button
-            onClick={loadFiles}
-            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-          >
-            Load Files
-          </button>
         </div>
-      </div>
 
-      {/* Uploaded Files */}
-      <div>
-        <h2 className="text-xl font-semibold mb-3">Uploaded Files</h2>
+        {/* Show uploaded files */}
+        {moduleFiles.length > 0 && (
+          <div className="mt-4">
+            <h3 className="font-semibold mb-2">Uploaded Files</h3>
+            <ul className="space-y-2">
+              {moduleFiles.map((f) => (
+                <li key={f.public_id} className="border p-2 rounded">
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    className="text-primary underline"
+                  >
+                    {f.type} — view
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
 
-        {files.length === 0 && <p className="text-gray-500">No files uploaded for this module.</p>}
+      {/* ---------------------------------------------------- */}
+      {/* DRAFTS SECTION                                       */}
+      {/* ---------------------------------------------------- */}
+      <section className="p-6 bg-white rounded shadow">
+        <h2 className="text-2xl font-bold mb-4">Generated Drafts</h2>
 
-        {files.map((f) => (
-          <div
-            key={f.public_id}
-            className="border p-3 rounded mb-2 flex justify-between items-center bg-white shadow-sm"
-          >
-            <div>
-              <a
-                href={f.url}
-                target="_blank"
-                className="text-blue-600 underline font-medium"
-              >
-                {f.originalname || f.type || "View File"}
-              </a>
-              <p className="text-xs text-gray-500">{f.type}</p>
-            </div>
+        {drafts.length === 0 && (
+          <p className="text-gray-500">No drafts yet.</p>
+        )}
+
+        {drafts.map((d) => (
+          <div key={d._id} className="border p-4 rounded mb-3">
+            <h3 className="font-bold">{d.title}</h3>
+            <p className="text-sm">Status: {d.status}</p>
 
             <button
-              onClick={() => removeFile(f.public_id)}
-              className="text-red-600 hover:underline"
+              disabled={d.status === "published"}
+              onClick={() => publishDraft(d._id)}
+              className="mt-2 bg-blue-600 text-white px-3 py-1 rounded disabled:bg-gray-400"
             >
-              Delete
+              Publish
             </button>
           </div>
         ))}
-      </div>
+      </section>
     </div>
   );
 }
