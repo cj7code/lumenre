@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';  // <-- Added to handle Safari zstd bug
 import connectDB from './config/db.js';
 
 import authRoutes from './routes/auth.js';
@@ -13,28 +14,52 @@ import adminRoutes from './routes/admin.js';
 const app = express();
 
 /* --------------------------------------------------------
-   CORS FIX — REQUIRED FOR VERCEL FRONTEND + RENDER BACKEND
+   FIX: Safari / iPhone "zstd" compression bug
    --------------------------------------------------------
-   - Render REQUIRES explicit allowed origins
-   - Vercel frontend will be blocked without this
-   - Using a wildcard (*) causes CORS preflight to fail
-   - Connection closes → Axios timeout (your exact error)
+   - Safari 17+ requests "zstd" compression by default
+   - Render's NGINX does NOT support zstd
+   - Render closes the connection → Axios timeout
+   - This middleware strips zstd to prevent silent failures
+--------------------------------------------------------- */
+app.use((req, res, next) => {
+  const enc = req.headers["accept-encoding"];
+  if (enc && enc.includes("zstd")) {
+    req.headers["accept-encoding"] = "gzip, deflate, br"; // remove zstd safely
+  }
+  next();
+});
+
+/* --------------------------------------------------------
+   Optional improved compression (safe for Render)
+--------------------------------------------------------- */
+app.use(
+  compression({
+    level: 6,
+    filter: (req, res) => {
+      // Don't try to compress if Safari sent zstd (we already removed it)
+      return compression.filter(req, res);
+    },
+  })
+);
+
+/* --------------------------------------------------------
+   CORS FIX — REQUIRED FOR VERCEL FRONTEND + RENDER BACKEND
 --------------------------------------------------------- */
 app.use(
   cors({
     origin: [
       "http://localhost:5173",        // local development
-      "https://lumenre.vercel.app",   // your deployed Vercel frontend
+      "https://lumenre.vercel.app",   // production frontend
     ],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // allow all methods
-    allowedHeaders: ["Content-Type", "Authorization"],              // allow JWT / JSON
-    credentials: true,                                               
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204,
   })
 );
 
-// REQUIRED: handle preflight OPTIONS requests for all routes
+// Required to handle OPTIONS preflight properly
 app.options("*", cors());
 
 // Parse JSON
