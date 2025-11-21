@@ -60,7 +60,7 @@ app.use(
 );
 
 // Required to handle OPTIONS preflight properly
-app.options("*", cors());
+app.options("/api/*", cors());
 
 // Parse JSON
 app.use(express.json({ limit: '2mb' }));
