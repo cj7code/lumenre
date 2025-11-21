@@ -15,12 +15,12 @@ export default function CoursesListPage() {
   // Load courses on mount
   useEffect(() => {
     api
-      .get("/courses")
+      .get("courses")
       .then((res) => {
         setCourses(res.data);
         setFiltered(res.data);
       })
-      .catch(() => {});
+      .catch((err) => console.error("COURSE LIST LOAD ERROR:", err));
   }, []);
 
   // Apply search and filters

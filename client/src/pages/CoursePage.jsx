@@ -1,14 +1,15 @@
-// CoursePage
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../api';
+import api from '../api.js';   // <-- fixed import
 
 export default function CoursePage() {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
 
   useEffect(() => {
-    api.get(`/courses/${id}`).then(r => setCourse(r.data)).catch(() => {});
+    api.get(`courses/${id}`)   // <-- NO leading slash
+      .then(r => setCourse(r.data))
+      .catch(err => console.error("COURSE LOAD ERROR:", err));
   }, [id]);
 
   if (!course) return <div className="p-6">Loading...</div>;
@@ -20,7 +21,9 @@ export default function CoursePage() {
         {course.modules?.map(m => (
           <div key={m._id} className="p-3 bg-white rounded shadow">
             <h3 className="font-semibold">{m.title}</h3>
-            <p className="text-sm text-slate-600">{m.content?.slice(0, 260) || 'No content yet — admin should add notes.'}</p>
+            <p className="text-sm text-slate-600">
+              {m.content?.slice(0, 260) || 'No content yet — admin should add notes.'}
+            </p>
           </div>
         ))}
       </div>
