@@ -1,5 +1,5 @@
 {
-  "name": "lumere-server",
+  "name": "lumenre-server",
   "version": "1.0.0",
   "description": "backend for lumenre",
   "type": "module",
@@ -26,5 +26,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
