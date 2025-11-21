@@ -59,8 +59,12 @@ app.use(
   })
 );
 
-// Required to handle OPTIONS preflight properly
-app.options("/api/*", cors());
+// Handle CORS preflight for known API routes
+app.options("/api/auth", cors());
+app.options("/api/courses", cors());
+app.options("/api/quizzes", cors());
+app.options("/api/admin", cors());
+
 
 // Parse JSON
 app.use(express.json({ limit: '2mb' }));
