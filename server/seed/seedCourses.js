@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Course from '../models/Course.js';
 import Module from '../models/Module.js';
 
-dotenv.config();
+dotenv.config({ path: './server/.env' });
 
 async function seed() {
   if (!process.env.MONGO_URI) {
