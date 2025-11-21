@@ -23,12 +23,19 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",       // local development
-      "https://lumenre.vercel.app",  // your deployed Vercel frontend
+      "http://localhost:5173",        // local development
+      "https://lumenre.vercel.app",   // your deployed Vercel frontend
     ],
-    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // allow all methods
+    allowedHeaders: ["Content-Type", "Authorization"],              // allow JWT / JSON
+    credentials: true,                                               
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   })
 );
+
+// REQUIRED: handle preflight OPTIONS requests for all routes
+app.options("*", cors());
 
 // Parse JSON
 app.use(express.json({ limit: '2mb' }));
