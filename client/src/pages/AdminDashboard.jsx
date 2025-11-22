@@ -1,17 +1,14 @@
 // ------------------------------------------------------------
-// AdminDashboard.jsx
-// Full admin panel: 
-// - AI generation (notes, quizzes, slides)
-// - Direct file uploads per module
-// - Manage drafts
-// - Admin navigation shortcuts
+// AdminDashboard.jsx (FULLY FIXED)
 // ------------------------------------------------------------
 
 import { useState, useEffect } from "react";
-import axios from "../api";
+import api from "../api";
+
+// BASE PATH for all admin routes
+const ADMIN = "admin";
 
 export default function AdminDashboard() {
-  // ------------------------ STATES --------------------------
   const [title, setTitle] = useState("");
   const [moduleId, setModuleId] = useState("");
   const [rawContent, setRawContent] = useState("");
@@ -23,257 +20,189 @@ export default function AdminDashboard() {
 
   const [loading, setLoading] = useState(false);
 
-  // ----------------------------------------------------------
-  // Fetch drafts on load
-  // ----------------------------------------------------------
+  // Load drafts
   useEffect(() => {
     fetchDrafts();
   }, []);
 
   const fetchDrafts = async () => {
     try {
-      const res = await axios.get("/admin/drafts", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
+      const res = await api.get(`${ADMIN}/drafts`);
       setDrafts(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
       alert("Failed to load drafts");
     }
   };
 
-  // ----------------------------------------------------------
-  // AI Draft Upload (raw text or file)
-  // ----------------------------------------------------------
   const submitAIDraft = async (e) => {
     e.preventDefault();
     if (!title) return alert("Title is required");
 
-    const formData = new FormData();
-    formData.append("title", title);
-    if (moduleId) formData.append("moduleId", moduleId);
-    if (rawContent) formData.append("rawContent", rawContent);
-    if (file) formData.append("file", file);
+    const fd = new FormData();
+    fd.append("title", title);
+    if (moduleId) fd.append("moduleId", moduleId);
+    if (rawContent) fd.append("rawContent", rawContent);
+    if (file) fd.append("file", file);
 
     setLoading(true);
 
     try {
-      await axios.post("/admin/drafts", formData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "multipart/form-data",
-        },
+      await api.post(`${ADMIN}/drafts`, fd, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
-      alert("Draft created and AI content generated!");
+      alert("Draft created!");
       setTitle("");
       setRawContent("");
       setFile(null);
-
       fetchDrafts();
-    } catch (err) {
-      console.error(err);
-      alert("AI draft upload failed");
+    } catch (e) {
+      console.error(e);
+      alert("Draft creation failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // ----------------------------------------------------------
-  // Publish Draft
-  // ----------------------------------------------------------
-  const publishDraft = async (draftId) => {
+  const publishDraft = async (id) => {
     try {
-      await axios.post(`/admin/drafts/${draftId}/publish`, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
+      await api.post(`${ADMIN}/drafts/${id}/publish`);
       alert("Draft published!");
       fetchDrafts();
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
       alert("Publish failed");
     }
   };
 
-  // ----------------------------------------------------------
-  // Module File Upload (PDF, PPTX, DOCX, JPG, etc.)
-  // ----------------------------------------------------------
   const uploadModuleFile = async () => {
-    if (!selectedModule || !file) return alert("Select module and file!");
+    if (!selectedModule || !file) return alert("Module + file required");
 
-    const formData = new FormData();
-    formData.append("file", file);
+    const fd = new FormData();
+    fd.append("file", file);
 
     try {
-      await axios.post(`/admin/modules/${selectedModule}/upload`, formData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "multipart/form-data",
-        },
+      await api.post(`${ADMIN}/modules/${selectedModule}/upload`, fd, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
       alert("File uploaded!");
       loadModuleFiles(selectedModule);
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
       alert("Upload failed");
     }
   };
 
-  // ----------------------------------------------------------
-  // List module files
-  // ----------------------------------------------------------
   const loadModuleFiles = async (modId) => {
     try {
-      const res = await axios.get(`/admin/modules/${modId}/files`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
-      setModuleFiles(res.data);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load module files");
+      const res = await api.get(`${ADMIN}/modules/${modId}/files`);
+      setModuleFiles(res.data || []);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to load files");
     }
   };
 
-  // ----------------------------------------------------------
-  // RENDER DASHBOARD
-  // ----------------------------------------------------------
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-10">
-
-      {/* ---------------------------------------------------- */}
-      {/* ADMIN NAVIGATION SHORTCUTS (NEW)                     */}
-      {/* ---------------------------------------------------- */}
+      {/* ADMIN BUTTONS */}
       <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => (window.location.href = "/admin")}
-          className="px-4 py-2 bg-primary text-white rounded shadow hover:bg-teal-700"
-        >
+        <button onClick={() => (window.location.href = "/admin")}
+          className="px-4 py-2 bg-primary text-white rounded">
           Drafts
         </button>
 
-        <button
-          onClick={() => (window.location.href = "/admin/users")}
-          className="px-4 py-2 bg-primary text-white rounded shadow hover:bg-teal-700"
-        >
+        <button onClick={() => (window.location.href = "/admin/users")}
+          className="px-4 py-2 bg-primary text-white rounded">
           Manage Users
         </button>
 
-        <button
-          onClick={() => (window.location.href = "/admin/uploads")}
-          className="px-4 py-2 bg-primary text-white rounded shadow hover:bg-teal-700"
-        >
+        <button onClick={() => (window.location.href = "/admin/uploads")}
+          className="px-4 py-2 bg-primary text-white rounded">
           Uploads
         </button>
       </div>
 
-      {/* ---------------------------------------------------- */}
-      {/* AI GENERATION SECTION                                */}
-      {/* ---------------------------------------------------- */}
+      {/* --- AI GENERATOR FORM --- */}
       <section className="p-6 bg-white rounded shadow">
         <h2 className="text-2xl font-bold mb-4">AI Content Generator</h2>
 
         <form onSubmit={submitAIDraft} className="space-y-3">
-          <input
+          <input className="w-full border p-2 rounded"
+            placeholder="Draft title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Draft title"
-            className="w-full border p-2 rounded"
           />
-
-          <input
+          <input className="w-full border p-2 rounded"
+            placeholder="Module ID"
             value={moduleId}
             onChange={(e) => setModuleId(e.target.value)}
-            placeholder="Module ID (optional)"
-            className="w-full border p-2 rounded"
           />
-
-          <textarea
+          <textarea className="w-full border p-2 rounded h-32"
+            placeholder="Paste content"
             value={rawContent}
             onChange={(e) => setRawContent(e.target.value)}
-            placeholder="Paste raw content for AI"
-            className="w-full border p-2 rounded h-32"
           />
-
           <input type="file" onChange={(e) => setFile(e.target.files[0])} />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-primary text-white px-4 py-2 rounded"
-          >
+          <button disabled={loading}
+            className="bg-primary text-white px-4 py-2 rounded">
             {loading ? "Generating..." : "Upload & Generate"}
           </button>
         </form>
       </section>
 
-      {/* ---------------------------------------------------- */}
-      {/* DIRECT FILE UPLOAD SECTION                           */}
-      {/* ---------------------------------------------------- */}
+      {/* --- MODULE UPLOADS --- */}
       <section className="p-6 bg-white rounded shadow">
         <h2 className="text-2xl font-bold mb-4">Direct File Upload</h2>
 
-        <div className="space-y-3">
-          <input
-            value={selectedModule}
-            onChange={(e) => setSelectedModule(e.target.value)}
-            placeholder="Module ID"
-            className="w-full border p-2 rounded"
-          />
+        <input className="w-full border p-2 rounded"
+          placeholder="Module ID"
+          value={selectedModule}
+          onChange={(e) => setSelectedModule(e.target.value)}
+        />
 
-          <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
 
-          <button
-            onClick={uploadModuleFile}
-            className="bg-teal-600 text-white px-4 py-2 rounded"
-          >
-            Upload File
-          </button>
-        </div>
+        <button
+          onClick={uploadModuleFile}
+          className="bg-teal-600 text-white px-4 py-2 rounded"
+        >
+          Upload File
+        </button>
 
-        {/* Show uploaded files */}
-        {moduleFiles.length > 0 && (
-          <div className="mt-4">
-            <h3 className="font-semibold mb-2">Uploaded Files</h3>
-            <ul className="space-y-2">
-              {moduleFiles.map((f) => (
-                <li key={f.public_id} className="border p-2 rounded">
-                  <a
-                    href={f.url}
-                    target="_blank"
-                    className="text-primary underline"
-                  >
-                    {f.type} — view
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {/* Show module uploads */}
+        {moduleFiles?.length > 0 && (
+          <ul className="mt-4 space-y-2">
+            {moduleFiles.map((f) => (
+              <li key={f.public_id} className="border p-2 rounded">
+                <a href={f.url} target="_blank" className="underline text-primary">
+                  {f.type} — view
+                </a>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
-      {/* ---------------------------------------------------- */}
-      {/* DRAFTS SECTION                                       */}
-      {/* ---------------------------------------------------- */}
+      {/* --- DRAFT LIST --- */}
       <section className="p-6 bg-white rounded shadow">
         <h2 className="text-2xl font-bold mb-4">Generated Drafts</h2>
 
-        {drafts.length === 0 && (
-          <p className="text-gray-500">No drafts yet.</p>
-        )}
+        {drafts.length === 0 && <p>No drafts yet.</p>}
 
         {drafts.map((d) => (
           <div key={d._id} className="border p-4 rounded mb-3">
             <h3 className="font-bold">{d.title}</h3>
-            <p className="text-sm">Status: {d.status}</p>
+            <p>Status: {d.status}</p>
 
             <button
               disabled={d.status === "published"}
               onClick={() => publishDraft(d._id)}
-              className="mt-2 bg-blue-600 text-white px-3 py-1 rounded disabled:bg-gray-400"
+              className="mt-2 bg-blue-600 text-white px-3 py-1 rounded
+              disabled:bg-gray-400"
             >
               Publish
             </button>

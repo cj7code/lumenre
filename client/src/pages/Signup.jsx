@@ -13,7 +13,7 @@ export default function Signup() {
   async function submit(e) {
     e.preventDefault();
     try {
-      const res = await api.post('/auth/signup', { name, email, password, year });
+      const res = await api.post('auth/signup', { name, email, password, year });
       localStorage.setItem('token', res.data.token);
       nav('/');
     } catch (err) {

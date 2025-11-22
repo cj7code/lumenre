@@ -48,7 +48,7 @@ export default function AdminUsers() {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get("/admin/users", {
+      const res = await api.get("admin/users", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setUsers(res.data || []);
@@ -71,7 +71,7 @@ export default function AdminUsers() {
     setSaving(true);
 
     try {
-      const res = await api.post("/admin/users", form, {
+      const res = await api.post("admin/users", form, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
@@ -104,7 +104,7 @@ export default function AdminUsers() {
 
     try {
       const res = await api.put(
-        `/admin/users/${id}/role`,
+        `admin/users/${id}/role`,
         { role: newRole },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
@@ -125,7 +125,7 @@ export default function AdminUsers() {
     if (!window.confirm("Permanently delete this user?")) return;
 
     try {
-      await api.delete(`/admin/users/${id}`, {
+      await api.delete(`admin/users/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 

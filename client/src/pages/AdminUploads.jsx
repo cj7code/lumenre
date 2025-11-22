@@ -32,7 +32,7 @@ export default function AdminDashboard() {
 
   const fetchDrafts = async () => {
     try {
-      const res = await axios.get("/admin/drafts", {
+      const res = await axios.get("api/admin/drafts", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
     setLoading(true);
 
     try {
-      await axios.post("/admin/drafts", formData, {
+      await axios.post("api/admin/drafts", formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "multipart/form-data",
@@ -81,21 +81,27 @@ export default function AdminDashboard() {
   };
 
   // ----------------------------------------------------------
-  // Publish Draft
-  // ----------------------------------------------------------
-  const publishDraft = async (draftId) => {
-    try {
-      await axios.post(`/admin/drafts/${draftId}/publish`, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+// Publish Draft (FIXED: now sends moduleId)
+// ----------------------------------------------------------
+const publishDraft = async (draftId) => {
+  const mod = moduleId || selectedModule;
 
-      alert("Draft published!");
-      fetchDrafts();
-    } catch (err) {
-      console.error(err);
-      alert("Publish failed");
-    }
-  };
+  if (!mod) {
+    return alert("Please enter a Module ID before publishing.");
+  }
+
+  try {
+    await axios.post(`api/admin/drafts/${draftId}/publish`, {
+      moduleId: mod
+    });
+
+    alert("Draft published!");
+    fetchDrafts();
+  } catch (err) {
+    console.error(err);
+    alert(err?.response?.data?.error || "Publish failed");
+  }
+};
 
   // ----------------------------------------------------------
   // Module File Upload (PDF, PPTX, DOCX, JPG, etc.)
@@ -107,7 +113,7 @@ export default function AdminDashboard() {
     formData.append("file", file);
 
     try {
-      await axios.post(`/admin/modules/${selectedModule}/upload`, formData, {
+      await axios.post(`api/admin/modules/${selectedModule}/upload`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "multipart/form-data",
@@ -127,7 +133,7 @@ export default function AdminDashboard() {
   // ----------------------------------------------------------
   const loadModuleFiles = async (modId) => {
     try {
-      const res = await axios.get(`/admin/modules/${modId}/files`, {
+      const res = await axios.get(`api/admin/modules/${modId}/files`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 

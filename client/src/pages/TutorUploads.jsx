@@ -8,28 +8,39 @@ export default function TutorUploads() {
   const [files, setFiles] = useState([]);
 
   const loadFiles = async () => {
+    if (!moduleId) return alert("Enter module ID first");
+
     try {
-      const res = await api.get(`/tutor/uploads/${moduleId}`);
+      const res = await api.get(`modules/${moduleId}/files`);   // ✅ FIXED
       setFiles(res.data || []);
     } catch (e) {
+      console.error(e);
       alert("Failed to load files");
     }
   };
 
   const uploadFile = async () => {
-    if (!file || !moduleId) return alert("Enter module + file");
+    if (!file) return alert("Select a file");
+    if (!moduleId) return alert("Enter module ID");
 
     const fd = new FormData();
     fd.append("file", file);
 
     try {
-      await api.post(`/tutor/uploads/${moduleId}`, fd, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      await api.post(
+        `modules/${moduleId}/upload`,     // ✅ FIXED
+        fd,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       alert("Uploaded!");
       loadFiles();
     } catch (e) {
+      console.error(e);
       alert("Upload failed");
     }
   };
@@ -48,11 +59,17 @@ export default function TutorUploads() {
       <input type="file" onChange={(e) => setFile(e.target.files[0])} />
 
       <div className="flex gap-2">
-        <button onClick={uploadFile} className="bg-primary text-white p-2 rounded">
+        <button
+          onClick={uploadFile}
+          className="bg-primary text-white p-2 rounded"
+        >
           Upload
         </button>
 
-        <button onClick={loadFiles} className="bg-gray-700 text-white p-2 rounded">
+        <button
+          onClick={loadFiles}
+          className="bg-gray-700 text-white p-2 rounded"
+        >
           Refresh
         </button>
       </div>
@@ -62,8 +79,12 @@ export default function TutorUploads() {
 
         {files.map((f) => (
           <div key={f.public_id} className="border p-3 rounded mb-2">
-            <a href={f.url} target="_blank" className="underline text-primary">
-              View {f.type}
+            <a
+              href={f.url}
+              target="_blank"
+              className="underline text-primary"
+            >
+              {f.original_filename || "View file"}
             </a>
           </div>
         ))}

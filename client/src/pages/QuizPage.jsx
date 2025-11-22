@@ -8,7 +8,7 @@ export default function QuizPage() {
   const [quiz, setQuiz] = useState(null);
 
   useEffect(() => {
-    api.get(`/quizzes/${id}`).then(r => setQuiz(r.data)).catch(() => {});
+    api.get(`quizzes/${id}`).then(r => setQuiz(r.data)).catch(() => {});
   }, [id]);
 
   if (!quiz) return <div className="p-6">Loading...</div>;

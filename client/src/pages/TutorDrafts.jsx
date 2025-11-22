@@ -18,7 +18,7 @@ export default function TutorDrafts() {
 
   const loadDrafts = async () => {
     try {
-      const res = await api.get("/tutor/drafts");
+      const res = await api.get("tutor/drafts");   // ✅ FIXED
       setDrafts(res.data || []);
     } catch (err) {
       alert("Failed to load drafts");
@@ -38,9 +38,10 @@ export default function TutorDrafts() {
 
     setLoading(true);
     try {
-      await api.post("/tutor/drafts", fd, {
+      await api.post("tutor/drafts", fd, {       // ✅ FIXED (removed slash)
         headers: { "Content-Type": "multipart/form-data" }
       });
+
       alert("Draft created!");
       setTitle("");
       setRawContent("");
@@ -54,15 +55,28 @@ export default function TutorDrafts() {
   };
 
   // Publish draft
+  // Publish draft (FIXED)
   const publishDraft = async (id) => {
     if (!window.confirm("Publish this draft?")) return;
 
-    try {
-      await api.post(`/tutor/drafts/${id}/publish`);
-      alert("Draft published!");
-      loadDrafts();
-    } catch (e) {
-      alert("Publish failed");
+  // Ask tutor for module ID if draft doesn't have one
+  const mod = prompt("Enter Module ID for this draft:");
+
+  if (!mod || mod.trim() === "") {
+    return alert("Module ID is required to publish.");
+  }
+
+  try {
+    await api.post(`tutor/drafts/${id}/publish`, {
+      moduleId: mod.trim()
+    });
+
+    alert("Draft published!");
+    loadDrafts();
+    } 
+    catch (e) {
+        console.error(e);
+        alert("Publish failed");
     }
   };
 
