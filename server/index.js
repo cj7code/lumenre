@@ -1,3 +1,4 @@
+// index.js
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -10,6 +11,14 @@ import authRoutes from './routes/auth.js';
 import courseRoutes from './routes/courses.js';
 import quizRoutes from './routes/quizzes.js';
 import adminRoutes from './routes/admin.js';
+import tutorRoutes from "./routes/tutor.js";
+import aiRoutes from "./routes/ai.js";
+import studentRoutes from "./routes/student.js";
+
+import Module from "./models/Module.js";
+
+console.log(">>> ATTACHMENTS SCHEMA:", Module.schema.path("attachments"));
+
 
 const app = express();
 
@@ -80,6 +89,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/admin', adminRoutes);
+app.use("/api/tutor", tutorRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/student", studentRoutes);
 
 // Basic error handler
 app.use((err, req, res, next) => {
