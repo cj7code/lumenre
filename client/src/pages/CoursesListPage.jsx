@@ -15,7 +15,7 @@ export default function CoursesListPage() {
   // Load courses on mount
   useEffect(() => {
     api
-      .get("courses")
+      .get("/api/courses")
       .then((res) => {
         setCourses(res.data);
         setFiltered(res.data);

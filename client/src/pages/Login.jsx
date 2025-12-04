@@ -19,7 +19,7 @@ export default function Login() {
 
     try {
       // 📨 Send login request to backend
-      const res = await api.post('auth/login', { email, password });
+      const res = await api.post('/api/auth/login', { email, password });
 
       // ✅ Save JWT token and user info locally
       localStorage.setItem('token', res.data.token);

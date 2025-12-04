@@ -1,12 +1,19 @@
-// src/components/Layout.jsx
-import Footer from "./Footer";
 import BackToTop from "./BackToTop";
+import BottomNav from "./BottomNav";
 
 export default function Layout({ children }) {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
-      <main className="flex-grow">{children}</main>
+    <div className="flex-1 w-full pb-16 md:pb-0">
+      
+      {/* Global page wrapper */}
+      <div className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 w-full">
+        {children}
+      </div>
+
       <BackToTop />
+
+      {/* Mobile navigation for students */}
+      <BottomNav />
     </div>
   );
 }

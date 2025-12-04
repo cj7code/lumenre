@@ -64,7 +64,8 @@ export default function Header() {
 
   return (
     <header className="bg-[#0a5275] dark:bg-slate-900 text-white shadow-sm sticky top-0 z-50">
-      <nav className="max-w-6xl mx-auto flex justify-between items-center py-5 px-4">
+      {/* ⭐ Updated spacing: max-w-7xl + px-2 (tighter edges) */}
+      <nav className="max-w-7xl mx-auto flex justify-between items-center py-5 px-2">
 
         {/* LOGO */}
         <Link to="/" className="text-xl font-bold tracking-wide">
@@ -96,13 +97,14 @@ export default function Header() {
 
           {/* Quizzes */}
           <Link
-            to="/quiz/1"
+            to="/quizzes"
             className={`hover:text-teal-200 transition ${
-              isActive("/quiz/1") ? "underline font-semibold" : ""
+              isActive("/quizzes") ? "underline font-semibold" : ""
             }`}
           >
             Quizzes
           </Link>
+
 
           {/* ---------------------------------------- */}
           {/* ROLE-BASED LINKS */}

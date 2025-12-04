@@ -1,12 +1,8 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.PROD
-  ? import.meta.env.VITE_API_URL         // MUST be: https://lumenre.onrender.com/api
-  : "http://localhost:5000/api";         // MUST include /api
-
 const api = axios.create({
-  baseURL,
-  timeout: 10000,
+  baseURL: import.meta.env.VITE_API_URL, // always read from env
+  timeout: 15000,
 });
 
 api.interceptors.request.use((config) => {
