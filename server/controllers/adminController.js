@@ -4,18 +4,18 @@ import Draft from '../models/Draft.js';
 import Module from '../models/Module.js';
 import Quiz from '../models/Quiz.js';
 import cloudinary from '../config/cloudinary.js';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+// import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
 import generateStub from '../worker/generateStub.js';
 
 // create multer-storage-cloudinary storage (resource_type: auto to accept docs)
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'lumenre_uploads',
-    resource_type: 'auto'
-  }
-});
+//const storage = new CloudinaryStorage({
+  //cloudinary,
+  //params: {
+   // folder: 'lumenre_uploads',
+   // resource_type: 'auto'
+ // }
+//});
 
 // multer middleware exported for routes
 export const uploadToCloud = multer({ storage });
