@@ -177,7 +177,7 @@ export default function TutorDashboard() {
     if (!window.confirm("Delete this draft?")) return;
 
     try {
-      await api.delete(`/api/api/tutor/drafts/${draftId}`, {
+      await api.delete(`/api/tutor/drafts/${draftId}`, {
         headers: authHeader(),
       });
       alert("Draft deleted");
