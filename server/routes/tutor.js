@@ -1,72 +1,147 @@
-// tutor.js
+// ============================================================================
+// TUTOR ROUTES
+// ============================================================================
+
 import express from "express";
-import { adminAuth } from "../middleware/staffAuth.js"; 
-import tutorOnly from "../middleware/tutorOnly.js";
+import { staffAuth } from "../middleware/staffAuth.js";
 
-import {
-  uploadToCloud,
-  createDraft,
-  listDrafts,
-  getDraft,
-  publishDraft
-} from "../controllers/adminController.js";
+import Module from "../models/Module.js";
 
+// Cloudinary upload
+import uploadToCloud from "../middleware/uploadToCloud.js";
+
+// File handlers
 import {
   uploadModuleFile,
   listModuleFiles,
-  deleteModuleFile
+  deleteModuleFile,
+  incrementDownload,
 } from "../controllers/moduleUploadController.js";
+
+// Module controllers
+import {
+  createModule,
+  listModulesByCourse,
+} from "../controllers/moduleController.js";
+
+// Draft controllers
+import {
+  createDraft,
+  listDrafts,
+  getDraft,
+  publishDraft,
+  deleteDraft,
+} from "../controllers/draftController.js";
+
+// Tutor quiz creation
+import { tutorCreateQuiz } from "../controllers/tutorQuizController.js";
 
 const router = express.Router();
 
-// ---------------------------
-// Tutor Draft Routes
-// ---------------------------
-router.post(
-  "/drafts",
-  adminAuth,
-  tutorOnly,
-  uploadToCloud.single("file"),
-  createDraft
-);
+// ============================================================================
+// MODULE CREATION
+// ============================================================================
+router.post("/modules", staffAuth, createModule);
 
-router.get(
-  "/drafts",
-  adminAuth,
-  tutorOnly,
-  listDrafts
-);
+router.get("/courses/:courseId/modules", staffAuth, listModulesByCourse);
 
+// ============================================================================
+// FILE MANAGEMENT (Same as Admin)
+// ============================================================================
 router.post(
-  "/drafts/:id/publish",
-  adminAuth,
-  tutorOnly,
-  publishDraft
-);
-
-// ---------------------------
-// Tutor File Uploads
-// ---------------------------
-router.post(
-  "/uploads/:moduleId",
-  adminAuth,
-  tutorOnly,
-  uploadToCloud.single("file"),
+  "/modules/:moduleId/upload",
+  staffAuth,
+  uploadToCloud,
   uploadModuleFile
 );
 
-router.get(
-  "/uploads/:moduleId",
-  adminAuth,
-  tutorOnly,
-  listModuleFiles
-);
+router.get("/modules/:moduleId/files", staffAuth, listModuleFiles);
 
 router.delete(
-  "/uploads/:moduleId/:publicId",
-  adminAuth,
-  tutorOnly,
+  "/modules/:moduleId/files/:publicId",
+  staffAuth,
   deleteModuleFile
 );
+
+router.get(
+  "/modules/:moduleId/files/:publicId/download",
+  staffAuth,
+  incrementDownload
+);
+
+// ============================================================================
+// DRAFT MANAGEMENT
+// ============================================================================
+router.post("/drafts", staffAuth, uploadToCloud, createDraft);
+router.get("/drafts", staffAuth, listDrafts);
+router.get("/drafts/:id", staffAuth, getDraft);
+router.post("/drafts/:id/publish", staffAuth, publishDraft);
+router.delete("/drafts/:id", staffAuth, deleteDraft);
+
+// ============================================================================
+// QUIZ BUILDER
+// ============================================================================
+router.post(
+  "/modules/:moduleId/quizzes",
+  staffAuth,
+  tutorCreateQuiz
+);
+
+// ============================================================================
+// GET SINGLE MODULE
+// ============================================================================
+router.get("/modules/:moduleId", staffAuth, async (req, res) => {
+  try {
+    const mod = await Module.findById(req.params.moduleId)
+      .populate("course", "title")
+      .lean();
+
+    if (!mod) return res.status(404).json({ error: "Module not found" });
+
+    res.json(mod);
+  } catch (err) {
+    console.error("GET MODULE ERROR:", err);
+    res.status(500).json({ error: "Failed to load module" });
+  }
+});
+
+// ============================================================================
+// UPDATE MODULE CONTENT (Manual + AI)
+// ============================================================================
+router.put("/modules/:moduleId/content", staffAuth, async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    const updated = await Module.findByIdAndUpdate(
+      req.params.moduleId,
+      { content },
+      { new: true }
+    );
+
+    if (!updated)
+      return res.status(404).json({ error: "Module not found" });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("UPDATE MODULE CONTENT ERROR:", err);
+    res.status(500).json({ error: "Failed to update module content" });
+  }
+});
+
+// ============================================================================
+// FIX: Tutor listing modules always returns correct response
+// ============================================================================
+router.get("/courses/:courseId/modules", staffAuth, async (req, res) => {
+  try {
+    const modules = await Module.find({
+      course: req.params.courseId,
+    }).lean();
+
+    res.json(modules);
+  } catch (err) {
+    console.error("TUTOR LIST MODULES ERROR:", err);
+    res.status(500).json({ error: "Failed to load modules" });
+  }
+});
 
 export default router;
