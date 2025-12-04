@@ -44,3 +44,5 @@ build/
 # Optional: if you use Docker
 docker-compose.override.yml
 .env.docker
+
+screenshots/
