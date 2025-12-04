@@ -1,277 +1,175 @@
-Pitchdeck: https://www.canva.com/design/DAG5Vaym1fc/eKwFoG9Di4q90nH_liEykQ/edit?utm_content=DAG5Vaym1fc&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
-LUMENRE – Nursing e-Learning & Assessment Platform
 
-A Modern MERN-Based Learning Management System (LMS) for Nursing Students, Tutors & Administrators
+# 🌟 Lumenre Nursing Education Companion 
+A comprehensive AI‑powered Nursing Education Companion built for nursing education.  
+Designed for students, tutors, and administrators with advanced workflows, quizzes, module delivery, and cloud‑based file previews.
 
-📘 Project Overview
+---
 
-Lumenre is a full-stack MERN (MongoDB, Express, React, Node.js) e-learning platform designed for Nursing Schools.
-It supports:
+## 📸 Screenshots
+```
+/screenshots/dashboard.png                – Landing Dashboard  
+/screenshots/admin_dashboard.png          – Admin Dasboard  
+/screenshots/quiz_builder.png             – Quiz Builder  
+/screenshots/take_quiz.png                – Student Quiz View  
+/screenshots/course_content.png           – Course Content
+/screenshots/courses.png                  – Courses
+/screenshots/login.png                    – Login
+/screenshots/quizzes_attachments.png      – Qizzes and Attachments
+/screenshots/tutor_dashboard.png          – Tutor dashboare
+```
 
-Course distribution
+---
 
-Tutor content creation
+## 🔗 Live Project Links
+- **GitHub Link:**         https://github.com/cj7code/lumenre.git
+- **Frontend (Vercel):**   https://lumenre.vercel.app/  
+- **Backend (Render):**    https://lumenre.onrender.com/ 
+- **Pitch Deck:**          https://www.canva.com/design/DAG5Vaym1fc/eKwFoG9Di4q90nH_liEykQ/edit?utm_content=DAG5Vaym1fc&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton  
 
-Student learning & quizzes
+---
 
-Admin oversight with dashboards
+## 🧭 Project Overview  
+The **Lumenre Nursing Education Companion** enhances learning efficiency with:  
+- AI‑generated notes and slides  
+- Structured quiz builder for tutors  
+- Cloud-based module attachments  
+- Inline PDF/image/video previews  
+- Role‑based dashboards (Student / Tutor / Admin)  
+- Fully mobile‑responsive layouts  
+- Secure JWT authentication  
+- MongoDB Atlas data persistence  
 
-Offline syncing
+---
 
-Role-based access control (RBAC)
+## 🏗️ Folder Structure
 
-This project was developed as part of the PLP Academy Hackathon (July 2025 Cohort).
-
-🚀 Core Features
-👩‍⚕️ Student Features
-
-View nursing courses & modules
-
-Read notes created by tutors
-
-Attempt quizzes
-
-Track progress
-
-Offline learning (PWA-ready)
-
-👨‍🏫 Tutor Features
-
-Create / edit modules
-
-Manage quizzes & questions
-
-Upload content
-
-View class performance
-
-🛠️ Admin Features
-
-Manage users (students, tutors)
-
-Manage courses & modules
-
-Approve/update content
-
-Monitor platform statistics & activity
-
-🌐 General Features
-
-Role-based authentication
-
-Modern React UI with TailwindCSS
-
-API-based modular backend
-
-MongoDB models for Courses, Modules, Quizzes, Users
-
-RESTful architecture
-
-Clean reusable frontend components
-
-Responsive design (mobile-friendly)
-
-Secure JWT authentication
-
-Error boundary handling
-
-Full seeding system for nursing courses
-
-📂 Project Structure
+```
 lumenre/
-├── server/
-│   ├── models/
-│   ├── controllers/
-│   ├── routes/
-│   ├── middleware/
-│   ├── seed/
-│   │   └── seedCourses.js
-│   ├── server.js
-│   └── .env
 │
-├── client/
+├── client/                       # React frontend
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── api.js
-│   │   └── App.jsx
+│   │   ├── components/          # Reusable UI components
+│   │   ├── pages/               # Page-level screens
+│   │   ├── layouts/             # Admin/Tutor layouts
+│   │   ├── styles/              # Global Tailwind styles
+│   │   ├── api.js               # Axios API handler
+│   │   ├── App.jsx              # Router + Layout
+│   │   └── main.jsx             # Entry point
 │   ├── public/
+│   ├── screenshots/
 │   └── package.json
 │
+├── server/                       # Express backend
+│   ├── routes/                  # student.js, admin.js, tutor.js, etc.
+│   ├── controllers/             # Quiz, Module, Course, Auth
+│   ├── middleware/              # JWT auth, Cloudinary, staffAuth
+│   ├── models/                  # Mongoose schemas
+│   ├── config/                  # DB + Cloudinary config
+│   └── server.js                # API entry
+│
+├── .env.example                 # Example environment variables
 └── README.md
+```
 
-🧰 Tech Stack
-Frontend
+---
 
-React + Vite
+## ⚙️ Installation
 
-React Router
-
-TailwindCSS
-
-shadcn/ui
-
-Lucide Icons
-
-Axios
-
-Framer Motion
-
-LocalStorage for Auth Persistence
-
-PWA Offline Sync Banner
-
-Backend
-
-Node.js
-
-Express
-
-MongoDB / Mongoose
-
-JWT Authentication
-
-bcrypt Password Hashing
-
-CORS
-
-dotenv
-
-⚙️ Installation & Setup
-1️⃣ Clone the Repository
-git clone https://github.com/your-username/lumenre.git
+### 1. Clone Repository
+```bash
+git clone https://github.com/cj7code/lumenre.git
 cd lumenre
+```
 
-🗄️ Backend Setup (server)
-2️⃣ Install Backend Dependencies
+### 2. Install Backend
+```bash
 cd server
 npm install
+```
 
-3️⃣ Create a .env file in /server
-MONGO_URI=mongodb+srv://yourcluster.mongodb.net/lumenre
-JWT_SECRET=yourStrongSecretKey
-PORT=5000
-
-4️⃣ Start Backend
-npm run dev
-
-🎨 Frontend Setup (client)
-5️⃣ Install Frontend Dependencies
+### 3. Install Frontend
+```bash
 cd ../client
 npm install
+```
 
-6️⃣ Start Frontend
-npm run dev
+---
 
-🌱 Seeding the Database
+## 🔑 Environment Variables
 
-A full nursing curriculum is included in:
-server/seed/seedCourses.js
+### Backend `.env`
+```
+MONGO_URI=your_mongo_string
+JWT_SECRET=your_secret
+CLOUDINARY_CLOUD_NAME=xxx
+CLOUDINARY_API_KEY=xxx
+CLOUDINARY_API_SECRET=xxx
+```
 
-To seed the courses:
+### Frontend `.env`
+```
+VITE_API_URL=https://your-backend.onrender.com
+```
+
+---
+
+## ▶️ Running the App
+
+### Start Backend
+```bash
 cd server
-node seed/seedCourses.js
+npm start
+```
 
+### Start Frontend
+```bash
+cd client
+npm run dev
+```
 
-If you want to reseed (clean first):
+---
 
-mongo
-db.courses.deleteMany({})
-db.modules.deleteMany({})
+## 🧩 Core Features
 
+### 👩‍🏫 Tutor  
+- Create modules  
+- Upload PDF/images/videos  
+- AI note/slide generator  
+- Build quizzes (MCQ, T/F, Matching, Essay, etc.)  
+- Manage drafts  
 
-Then rerun seeding.
+### 🧑‍🎓 Student  
+- View courses & modules  
+- Inline PDF viewer  
+- Attempt quizzes  
+- Track attempts  
 
-🔒 Authentication Flow
+### 👨‍💼 Admin  
+- Manage users  
+- Manage modules  
+- Analytics view  
+- Role assignment  
 
-User registers → /auth/signup
+---
 
-User logs in → /auth/login
+## 🧪 Quiz Engine Overview  
+Supports:  
+- Multiple Choice  
+- True/False  
+- Sentence Completion  
+- Matching Items  
+- Short Answer  
+- Essay Items  
+- Auto‑scoring for objective types  
 
-Backend returns JWT token
+---
 
-Token stored in localStorage
+## 👨‍⚕️ Author  
+**Joseph Charles Jolofan Sakala, RN BSc Nursing**  
+Nurse Educator • Full‑stack Developer (in training)
+PLP - ACADEMY
 
-Frontend decodes the user role to show the correct dashboard
+---
 
-Roles used:
-
-admin
-tutor
-student
-
-🧭 Frontend Routing Structure
-Route	Page	Role
-/	Dashboard	Public
-/courses	All Courses	Public
-/courses/:id	Single Course	Public
-/quiz/:id	Quiz Page	Student
-/admin	Admin Dashboard	Admin
-/tutor	Tutor Dashboard	Tutor
-/student	Student Dashboard	Student
-/login	Login	Public
-/signup	Signup	Public
-🖼️ Screenshots (Placeholders)
-
-(Add images to client/public/screenshots/)
-
-![Login Screen](client/public/screenshots/login.png)
-![Chat Room](client/public/screenshots/rooms.png)
-![Users List](client/public/screenshots/users.png)
-![Course List](client/public/screenshots/chat.png)
-
-🧪 Testing Suggestions
-
-(Not implemented yet, but recommended)
-
-Jest + React Testing Library
-
-Supertest for API endpoints
-
-Mocking MongoDB with In-Memory Server
-
-🧱 Known Issues
-
-Only shows 1 course before reseeding
-
-Some icons require installing:
-npm install lucide-react
-
-framer-motion needed:
-npm install framer-motion
-
-Admin dashboard breaks when drafts is not an array
-
-CORS must be enabled correctly
-
-/courses route must be added in App.jsx
-
-🤝 Contribution Guidelines
-
-Fork the repository
-
-Create a feature branch:
-
-git checkout -b feature-name
-
-
-Commit changes:
-
-git commit -m "Add new feature"
-
-
-Push to branch:
-
-git push origin feature-name
-
-
-Open a Pull Request
-
-📜 License
-
-MIT License © 2025 Lumenre Development Team
-
-🎯 Final Notes
-
-This project is continuously evolving, with new modules, dashboards, and assessment tools under active development.
-It aims to modernize nursing education in Zambia and beyond.
+## 📜 License  
+MIT License.
