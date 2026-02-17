@@ -5,6 +5,7 @@
 //   ✓ Renders different question types
 //   ✓ Submits answers array [{ answer }]
 //   ✓ Shows overall score
+//   ✓ Shows ✓ for correct and X for wrong answers (MCQ + TF only)
 // -------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -15,7 +16,7 @@ export default function StudentQuiz() {
   const { quizId } = useParams();
 
   const [quiz, setQuiz] = useState(null);
-  const [answers, setAnswers] = useState([]); // index-based
+  const [answers, setAnswers] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -59,7 +60,11 @@ export default function StudentQuiz() {
       const res = await api.post(`/api/student/quiz/${quizId}/submit`, {
         answers: answers.map((a) => ({ answer: a })),
       });
+
+      // IMPORTANT: result must contain per-question correctness
+      // e.g. res.data.results[index].correct
       setResult(res.data);
+
     } catch (err) {
       console.error("Submit failed", err);
       alert("Submit failed");
@@ -106,17 +111,38 @@ export default function StudentQuiz() {
           const type = q.type || "mcq";
           const answer = answers[index] ?? "";
 
+          // Get correctness AFTER submission
+          let isCorrect = null;
+
+          if (result && (type === "mcq" || type === "tf")) {
+            const correctAnswer = q.correctAnswer || q.answer;
+            isCorrect = answers[index] === correctAnswer;
+          }
+
           return (
             <div
               key={index}
               className="bg-white rounded shadow-sm p-4 space-y-3"
             >
-              <div className="text-sm font-semibold">
-                Q{index + 1}. {q.prompt}
-                <span className="ml-2 text-xs text-slate-500">
-                  ({typeLabel(type)}, {q.marks || 1} mark
-                  {q.marks > 1 ? "s" : ""})
-                </span>
+              <div className="text-sm font-semibold flex items-center justify-between">
+                <div>
+                  Q{index + 1}. {q.prompt}
+                  <span className="ml-2 text-xs text-slate-500">
+                    ({typeLabel(type)}, {q.marks || 1} mark
+                    {q.marks > 1 ? "s" : ""})
+                  </span>
+                </div>
+
+                {/* ✓ or X indicator (MCQ + TF only) */}
+                {result && (type === "mcq" || type === "tf") && (
+                  <span
+                    className={`text-lg font-bold ${
+                      isCorrect ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {isCorrect ? "✓" : "✗"}
+                  </span>
+                )}
               </div>
 
               {/* MCQ */}
@@ -133,6 +159,7 @@ export default function StudentQuiz() {
                         value={opt}
                         checked={answer === opt}
                         onChange={() => updateAnswer(index, opt)}
+                        disabled={!!result} // lock after submit
                       />
                       <span>{opt}</span>
                     </label>
@@ -154,6 +181,7 @@ export default function StudentQuiz() {
                         value={opt}
                         checked={answer === opt}
                         onChange={() => updateAnswer(index, opt)}
+                        disabled={!!result}
                       />
                       <span>{opt}</span>
                     </label>
@@ -161,7 +189,7 @@ export default function StudentQuiz() {
                 </div>
               )}
 
-              {/* SHORT / SENTENCE / MATCHING / ESSAY → textarea */}
+              {/* TEXT TYPES */}
               {(type === "short" ||
                 type === "sentence" ||
                 type === "matching" ||
@@ -171,15 +199,7 @@ export default function StudentQuiz() {
                   rows={type === "essay" ? 4 : 2}
                   value={answer}
                   onChange={(e) => updateAnswer(index, e.target.value)}
-                  placeholder={
-                    type === "short"
-                      ? "Short answer..."
-                      : type === "sentence"
-                      ? "Complete the sentence..."
-                      : type === "matching"
-                      ? "Write your matching pairs..."
-                      : "Write your essay answer..."
-                  }
+                  disabled={!!result}
                 />
               )}
             </div>
