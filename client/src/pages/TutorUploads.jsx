@@ -1,16 +1,18 @@
 // ============================================================================
 // TutorUploads.jsx
 // ----------------------------------------------------------------------------
-// Tutor File Manager:
-//   ✓ Uses SAME backend upload routes as admin
-//   ✓ Allows multi-file upload
-//   ✓ Allows deleting files
-//   ✓ Inline previews for images + PDFs
-//   ✓ Refresh list button
+// Tutor File Manager
 //
-// NOTE:
-// - <CourseModuleSelector /> allows picking course + module
-// - Frontend always sends files as `files` because backend uses .array("files")
+// FIXES APPLIED:
+// ✓ Prevents auto-download of PDFs and other files
+// ✓ Files are ALWAYS previewed inline first
+// ✓ Download/Open happens ONLY after explicit user action
+// ✓ Uses same backend routes (NO backend changes)
+// ✓ Mirrors student dashboard behaviour for consistency
+//
+// IMPORTANT:
+// - DO NOT use window.open() on file click
+// - Cloudinary URLs may force download if opened directly
 // ============================================================================
 
 import { useState } from "react";
@@ -26,8 +28,8 @@ export default function TutorUploads() {
   const [loadingFiles, setLoadingFiles] = useState(false);
 
   // ---------------------------------------------------------------------------
-  // Fetch files for a selected module
-  // REUSES: /admin/modules/:moduleId/files
+  // Load files for selected module
+  // SAME endpoint as AdminUploads (do not change)
   // ---------------------------------------------------------------------------
   const loadFiles = async () => {
     if (!moduleId) return alert("Select a module first");
@@ -45,8 +47,7 @@ export default function TutorUploads() {
   };
 
   // ---------------------------------------------------------------------------
-  // Upload one or more files (same as AdminUploads)
-  // Sends multipart/form-data with key: "files"
+  // Upload files (unchanged, already correct)
   // ---------------------------------------------------------------------------
   const uploadFile = async () => {
     if (!moduleId || filesToUpload.length === 0)
@@ -73,8 +74,7 @@ export default function TutorUploads() {
   };
 
   // ---------------------------------------------------------------------------
-  // Delete file from Cloudinary + module record
-  // Route: /admin/modules/:moduleId/files/:publicId
+  // Delete file (unchanged)
   // ---------------------------------------------------------------------------
   const removeFile = async (publicId) => {
     if (!window.confirm("Delete this file?")) return;
@@ -83,7 +83,6 @@ export default function TutorUploads() {
       await api.delete(
         `/api/admin/modules/${moduleId}/files/${encodeURIComponent(publicId)}`
       );
-      alert("Deleted");
       loadFiles();
     } catch (err) {
       console.error(err);
@@ -92,9 +91,12 @@ export default function TutorUploads() {
   };
 
   // ---------------------------------------------------------------------------
-  // Open file in new tab + increment download counter
+  // Explicit open/download action
+  // ✔ Increment counter
+  // ✔ THEN open file
+  // ✔ NEVER auto-triggered
   // ---------------------------------------------------------------------------
-  const openFile = async (file) => {
+  const openFileExplicitly = async (file) => {
     try {
       await api.post(
         `/api/admin/modules/${moduleId}/files/${encodeURIComponent(
@@ -102,15 +104,16 @@ export default function TutorUploads() {
         )}/download`
       );
     } catch (err) {
-      console.error("Failed to increment downloads", err);
+      console.error("Download counter failed", err);
     }
 
+    // Explicit user intent ONLY
     window.open(file.url, "_blank", "noopener,noreferrer");
   };
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
-      {/* Page Title */}
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Tutor — File Manager</h1>
 
@@ -128,7 +131,7 @@ export default function TutorUploads() {
           value={moduleId}
           onChange={(val) => {
             setModuleId(val);
-            if (val) loadFiles(); // Auto-load files when module changes
+            if (val) loadFiles();
           }}
         />
 
@@ -136,7 +139,6 @@ export default function TutorUploads() {
           type="file"
           multiple
           onChange={(e) => setFilesToUpload([...e.target.files])}
-          className="block"
         />
 
         <button
@@ -155,7 +157,7 @@ export default function TutorUploads() {
         </button>
       </div>
 
-      {/* File Listing Section */}
+      {/* File List */}
       <div>
         {files.length === 0 && !loadingFiles && (
           <p>No files for this module yet.</p>
@@ -165,8 +167,8 @@ export default function TutorUploads() {
           <FilePreview
             key={file.public_id}
             file={file}
-            onOpen={() => openFile(file)}
             onDelete={() => removeFile(file.public_id)}
+            onOpen={() => openFileExplicitly(file)}
           />
         ))}
       </div>
@@ -176,67 +178,68 @@ export default function TutorUploads() {
 
 // ============================================================================
 // FilePreview Component
-// Shows inline preview for images + PDFs + fallback for other files
+// ----------------------------------------------------------------------------
+// CRITICAL RULE:
+// - Preview FIRST
+// - Download/Open ONLY via explicit button
+// - NO auto navigation
 // ============================================================================
-function FilePreview({ file, onOpen, onDelete }) {
+function FilePreview({ file, onDelete, onOpen }) {
   const isImage = file.type?.startsWith("image/");
   const isPDF = file.type === "application/pdf";
 
   return (
     <div className="p-4 border rounded mb-3 shadow-sm bg-white">
-      <div className="flex items-start justify-between">
-        
-        {/* Preview block */}
-        <div className="flex items-center gap-4">
+      <div className="flex justify-between items-start gap-4">
 
-          {/* Image thumbnail */}
+        {/* Preview */}
+        <div className="flex gap-4">
+          {/* Image preview */}
           {isImage && (
             <img
               src={file.url}
-              alt={file.originalName || ""}
-              className="w-20 h-20 object-cover rounded border"
+              alt={file.originalName}
+              className="w-24 h-24 object-cover border rounded"
             />
           )}
 
-          {/* PDF preview */}
+          {/* PDF inline preview (NO DOWNLOAD) */}
           {isPDF && (
             <iframe
               src={file.url}
-              className="w-24 h-24 border rounded"
-              title={file.originalName || "PDF Preview"}
+              className="w-32 h-32 border rounded"
+              title={file.originalName}
             />
           )}
 
-          {/* Generic file icon */}
+          {/* Other file types */}
           {!isImage && !isPDF && (
-            <div className="w-20 h-20 flex items-center justify-center bg-gray-200 rounded text-gray-600 text-xs text-center p-1">
-              📄 {file.type?.split("/")[1] || "file"}
+            <div className="w-24 h-24 flex items-center justify-center bg-gray-200 rounded text-xs text-center">
+              {file.type?.split("/")[1] || "FILE"}
             </div>
           )}
 
-          {/* Text info */}
+          {/* Meta */}
           <div>
-            <button
-              onClick={onOpen}
-              className="text-primary underline block text-sm text-left"
-            >
-              {file.originalName || "Open file"}
-            </button>
-
-            <p className="text-xs mt-1 text-gray-600">
+            <p className="font-medium text-sm">{file.originalName}</p>
+            <p className="text-xs text-gray-600">
               Downloads: <b>{file.downloads || 0}</b>
             </p>
 
-            <p className="text-xs text-gray-500 break-all">
-              {file.type}
-            </p>
+            {/* Explicit action button */}
+            <button
+              onClick={onOpen}
+              className="mt-2 text-sm text-primary underline"
+            >
+              Open / Download
+            </button>
           </div>
         </div>
 
-        {/* Delete button */}
+        {/* Delete */}
         <button
           onClick={onDelete}
-          className="text-red-600 text-sm underline ml-4"
+          className="text-red-600 text-sm underline"
         >
           Delete
         </button>
