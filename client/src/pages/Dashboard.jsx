@@ -166,10 +166,10 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
                 Available Courses
               </h2>
-              <p className="text-sm text-slate-600 mt-1">
+              <p className="text-sm text-slate-600 mt-1 dark:text-white">
                 Tap a year → a semester → choose a course.
               </p>
             </div>
