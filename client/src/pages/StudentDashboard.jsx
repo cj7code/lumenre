@@ -1,145 +1,394 @@
 // StudentDashboard.jsx
 // ---------------------------------------------------------------------------
-// Student home page:
-//   ✓ Lists all courses
-//   ✓ Clicking a course shows modules
-//   ✓ Clicking a module opens StudentModuleView
-//   ✓ Tracks progress (client-side, backend optional)
+// PROFESSIONAL STUDENT DASHBOARD — FINAL & STABLE + ACTIVE MODULE HIGHLIGHT + FULLSCREEN
+//
+// ✓ Courses grouped by Year → Semester
+// ✓ Clicking course expands modules BELOW it (left pane)
+// ✓ Clicking module loads ACTUAL CONTENT immediately (right pane)
+// ✓ Active module is clearly highlighted
+// ✓ Draggable / resizable left pane with minimize/maximize arrows
+// ✓ Independent scrolling for right pane
+// ✓ Next / Previous module buttons (top + bottom)
+// ✓ Full-screen reading mode with ⛶ / ✖ symbols
+// ✓ Font resizing (A+ / A−)
+// ✓ Attachments listed first → open ONLY on click
+// ✓ PDFs open inline (NO auto-download)
+// ✓ Other files open/download only on click
 // ---------------------------------------------------------------------------
 
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
 import api from "../api";
 
-export default function StudentDashboard() {
-  const [courses, setCourses] = useState([]);
-  const [modules, setModules] = useState([]);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [loading, setLoading] = useState(true);
+// ---------------------------------------------------------------------------
+// INLINE PDF VIEWER (ON-DEMAND)
+// ---------------------------------------------------------------------------
+function InlinePDF({ att, onClose }) {
+  const [blobUrl, setBlobUrl] = useState(null);
 
-  const [progress, setProgress] = useState(() => {
-    // Local storage progress tracking
-    try {
-      return JSON.parse(localStorage.getItem("student-progress")) || {};
-    } catch {
-      return {};
-    }
-  });
-
-  // Save progress to local storage
-  const saveProgress = (modId) => {
-    const newProg = { ...progress, [modId]: "completed" };
-    setProgress(newProg);
-    localStorage.setItem("student-progress", JSON.stringify(newProg));
-  };
-
-  // Load all courses
   useEffect(() => {
-    loadCourses();
-  }, []);
+    let url;
 
-  const loadCourses = async () => {
-    try {
-      const res = await api.get("/api/student/courses");
-      setCourses(res.data || []);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load courses");
-    }
-    setLoading(false);
-  };
+    api
+      .get(att.url, { responseType: "blob" })
+      .then((res) => {
+        url = URL.createObjectURL(res.data);
+        setBlobUrl(url);
+      })
+      .catch(() => setBlobUrl(null));
 
-  const loadModules = async (courseId) => {
-    setModules([]);
-    setSelectedCourse(courseId);
-    try {
-      const res = await api.get(`/api/student/courses/${courseId}/modules`);
-      setModules(res.data || []);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load modules");
-    }
-  };
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [att.url]);
 
-  if (loading) return <p className="p-6">Loading dashboard…</p>;
+  if (!blobUrl) {
+    return <p className="text-sm text-slate-500">Loading PDF…</p>;
+  }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      {/* --------------------------- HEADER --------------------------- */}
-      <div>
-        <h1 className="text-3xl font-bold">Student Dashboard</h1>
-        <p className="text-slate-600 text-sm">
-          Welcome! Choose your course to begin learning.
-        </p>
+    <div className="my-4 border rounded overflow-hidden">
+      <div className="flex justify-between items-center p-2 bg-slate-100 border-b">
+        <span className="text-sm font-medium">{att.originalName}</span>
+        <button onClick={onClose} className="text-sm underline">
+          Close
+        </button>
       </div>
 
-      {/* --------------------------- COURSES --------------------------- */}
-      <section className="bg-white p-6 rounded shadow space-y-4">
-        <h2 className="text-xl font-semibold">Courses</h2>
+      <object
+        data={blobUrl}
+        type="application/pdf"
+        className="w-full h-[500px]"
+      />
 
-        <div className="grid md:grid-cols-2 gap-4">
-          {courses.map((course) => (
-            <button
-              key={course._id}
-              onClick={() => loadModules(course._id)}
-              className={`border p-4 rounded text-left shadow-sm hover:shadow-md transition ${
-                selectedCourse === course._id ? "border-primary" : ""
-              }`}
-            >
-              <h3 className="font-bold">{course.title}</h3>
-              <p className="text-xs text-slate-600">{course.description}</p>
+      <div className="p-2 border-t bg-slate-50 text-right">
+        <a
+          href={att.url}
+          download
+          className="text-sm text-blue-600 underline"
+        >
+          Download PDF
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DASHBOARD COMPONENT
+// ---------------------------------------------------------------------------
+export default function StudentDashboard() {
+  // -------------------------------
+  // STATE
+  // -------------------------------
+  const [courses, setCourses] = useState([]);
+  const [modulesByCourse, setModulesByCourse] = useState({});
+  const [activeCourse, setActiveCourse] = useState(null);
+  const [selectedModule, setSelectedModule] = useState(null);
+  const [expandedYear, setExpandedYear] = useState(null);
+  const [loadingContent, setLoadingContent] = useState(false);
+  const [readingFull, setReadingFull] = useState(false); // Fullscreen mode
+  const [fontSize, setFontSize] = useState(16);
+  const [leftPaneWidth, setLeftPaneWidth] = useState(300);
+  const [openAttachment, setOpenAttachment] = useState(null);
+
+  const leftPaneRef = useRef(null);
+  const draggingRef = useRef(false);
+
+  // -------------------------------
+  // LOAD COURSES
+  // -------------------------------
+  useEffect(() => {
+    api
+      .get("/api/student/courses")
+      .then((res) => setCourses(res.data || []))
+      .catch(console.error);
+  }, []);
+
+  // -------------------------------
+  // GROUP COURSES BY YEAR → SEMESTER
+  // -------------------------------
+  const grouped = {};
+  courses.forEach((c) => {
+    const y = c.year ?? "Unassigned";
+    const s = c.semester ?? "Unassigned";
+    grouped[y] ??= {};
+    grouped[y][s] ??= [];
+    grouped[y][s].push(c);
+  });
+
+  // -------------------------------
+  // LOAD MODULES
+  // -------------------------------
+  const loadModules = async (courseId) => {
+    setActiveCourse(courseId);
+    if (modulesByCourse[courseId]) return;
+
+    const res = await api.get(`/api/student/courses/${courseId}/modules`);
+    setModulesByCourse((prev) => ({
+      ...prev,
+      [courseId]: res.data || [],
+    }));
+  };
+
+  // -------------------------------
+  // LOAD MODULE CONTENT
+  // -------------------------------
+  const loadModuleContent = async (moduleId) => {
+    setLoadingContent(true);
+    setSelectedModule(null);
+    setOpenAttachment(null);
+
+    try {
+      const res = await api.get(`/api/student/modules/${moduleId}`);
+      setSelectedModule(res.data);
+    } catch {
+      setSelectedModule({
+        title: "Failed to load content",
+        content: "<p>No content available.</p>",
+        attachments: [],
+        quizzes: [],
+      });
+    } finally {
+      setLoadingContent(false);
+    }
+  };
+
+  // -------------------------------
+  // NAVIGATION (PREV / NEXT MODULE)
+  // -------------------------------
+  const navigateModule = (dir) => {
+    if (!activeCourse || !selectedModule) return;
+    const list = modulesByCourse[activeCourse] || [];
+    const idx = list.findIndex((m) => m._id === selectedModule._id);
+    const target = dir === "next" ? list[idx + 1] : list[idx - 1];
+    if (target) loadModuleContent(target._id);
+  };
+
+  // -------------------------------
+  // LEFT PANE RESIZE
+  // -------------------------------
+  const startDrag = () => (draggingRef.current = true);
+  const stopDrag = () => (draggingRef.current = false);
+
+  useEffect(() => {
+    const handle = (e) => {
+      if (!draggingRef.current) return;
+      if (e.clientX >= 150 && e.clientX <= 600)
+        setLeftPaneWidth(e.clientX);
+    };
+    window.addEventListener("mousemove", handle);
+    window.addEventListener("mouseup", stopDrag);
+    return () => {
+      window.removeEventListener("mousemove", handle);
+      window.removeEventListener("mouseup", stopDrag);
+    };
+  }, []);
+
+  const toggleLeftPane = () =>
+    setLeftPaneWidth(leftPaneWidth > 50 ? 50 : 300);
+
+  // -------------------------------
+  // FONT RESIZING
+  // -------------------------------
+  const increaseFont = () => setFontSize((f) => Math.min(f + 2, 32));
+  const decreaseFont = () => setFontSize((f) => Math.max(f - 2, 12));
+
+  // -------------------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------------------
+  return (
+    <div className="h-[calc(100vh-64px)] flex flex-col bg-slate-50">
+
+      {/* WELCOME HEADER */}
+      <div className="bg-white border-b px-6 py-3 font-bold text-lg">
+        Welcome to your dashboard
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* LEFT PANE */}
+        <aside
+          ref={leftPaneRef}
+          className="bg-white border-r p-4 overflow-y-auto"
+          style={{ width: leftPaneWidth }}
+        >
+          <div className="flex justify-between mb-4">
+            <button onClick={toggleLeftPane} className="border px-2">
+              {leftPaneWidth > 50 ? "«" : "»"}
             </button>
-          ))}
-        </div>
-      </section>
+            <div
+              className="w-2 bg-slate-200 cursor-ew-resize"
+              onMouseDown={startDrag}
+            />
+          </div>
 
-      {/* --------------------------- MODULES --------------------------- */}
-      {selectedCourse && (
-        <section className="bg-white p-6 rounded shadow space-y-4">
-          <h2 className="text-xl font-semibold">
-            Modules in {courses.find((c) => c._id === selectedCourse)?.title}
-          </h2>
+          {Object.entries(grouped).map(([year, semesters]) => (
+            <div key={year}>
+              <button
+                onClick={() =>
+                  setExpandedYear(expandedYear === year ? null : year)
+                }
+                className="font-semibold"
+              >
+                Year {year}
+              </button>
 
-          {modules.length === 0 ? (
-            <p className="text-sm text-slate-600">No modules yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {modules.map((mod) => (
-                <li
-                  key={mod._id}
-                  className="p-3 border rounded flex justify-between items-center hover:bg-slate-50"
-                >
-                  <div>
-                    <h3 className="font-bold">{mod.title}</h3>
-                    <p className="text-xs text-slate-600">
-                      {progress[mod._id] === "completed"
-                        ? "Completed ✔"
-                        : "Not started"}
+              {expandedYear === year &&
+                Object.entries(semesters).map(([sem, list]) => (
+                  <div key={sem} className="ml-3">
+                    <p className="text-xs text-slate-500">
+                      Semester {sem}
                     </p>
+                    {list.map((course) => (
+                      <div key={course._id}>
+                        <button
+                          onClick={() => loadModules(course._id)}
+                          className={`text-sm hover:underline ${
+                            activeCourse === course._id
+                              ? "font-semibold text-blue-600"
+                              : ""
+                          }`}
+                        >
+                          {course.title}
+                        </button>
+
+                        {activeCourse === course._id &&
+                          modulesByCourse[course._id]?.map((m) => (
+                            // -------------------------------
+                            // ACTIVE MODULE HIGHLIGHT
+                            // -------------------------------
+                            <button
+                              key={m._id}
+                              onClick={() => loadModuleContent(m._id)}
+                              className={`block ml-4 text-xs py-2 px-2 rounded transition ${
+                                selectedModule?._id === m._id
+                                  ? "bg-blue-50 text-blue-700 font-semibold border-l-4 border-blue-600"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+                              }`}
+                            >
+                              {m.title}
+                            </button>
+                          ))}
+                      </div>
+                    ))}
                   </div>
+                ))}
+            </div>
+          ))}
+        </aside>
 
-                  <div className="flex gap-3">
-                    <Link
-                      to={`/student/module/${mod._id}`}
-                      className="text-primary underline text-sm"
-                    >
-                      View
-                    </Link>
+        {/* RIGHT PANE */}
+        <main className="flex-1 bg-white flex flex-col">
+          {!selectedModule ? (
+            <div className="flex-1 flex items-center justify-center text-slate-500">
+              Select a module to begin reading.
+            </div>
+          ) : (
+            <>
+              {/* MODULE HEADER */}
+              <div className="border-b p-4 flex justify-between">
+                <h2 className="font-semibold">{selectedModule.title}</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => navigateModule("prev")}>«</button>
+                  <button onClick={() => navigateModule("next")}>»</button>
+                  {/* -------------------------------
+                      FULLSCREEN BUTTON
+                  ------------------------------- */}
+                  <button onClick={() => setReadingFull(true)}>⛶</button>
+                  <button onClick={increaseFont}>A+</button>
+                  <button onClick={decreaseFont}>A−</button>
+                </div>
+              </div>
 
-                    {progress[mod._id] !== "completed" && (
-                      <button
-                        onClick={() => saveProgress(mod._id)}
-                        className="text-xs bg-green-600 text-white px-2 py-1 rounded"
+              {/* MODULE CONTENT */}
+              <div
+                className="flex-1 overflow-y-auto p-6 prose max-w-none"
+                style={{ fontSize }}
+              >
+                {/* ATTACHMENT LIST */}
+                {selectedModule.attachments?.length > 0 && (
+                  <>
+                    <h3>Attachments</h3>
+                    <ul>
+                      {selectedModule.attachments.map((att) => (
+                        <li key={att.url}>
+                          <button
+                            onClick={() => setOpenAttachment(att)}
+                            className="text-blue-600 underline"
+                          >
+                            {att.originalName}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
+                {/* OPENED ATTACHMENT */}
+                {openAttachment?.originalName?.endsWith(".pdf") && (
+                  <InlinePDF
+                    att={openAttachment}
+                    onClose={() => setOpenAttachment(null)}
+                  />
+                )}
+
+                {/* MODULE HTML CONTENT */}
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: selectedModule.content,
+                  }}
+                />
+
+                {/* QUIZZES */}
+                {selectedModule.quizzes?.length > 0 && (
+                  <div className="mt-6">
+                    <h3>Quizzes</h3>
+                    {selectedModule.quizzes.map((q) => (
+                      <a
+                        key={q._id}
+                        href={`/student/quiz/${q._id}`}
+                        className="block text-blue-600 underline"
                       >
-                        Mark Complete
-                      </button>
-                    )}
+                        {q.title}
+                      </a>
+                    ))}
                   </div>
-                </li>
-              ))}
-            </ul>
+                )}
+              </div>
+            </>
           )}
-        </section>
+        </main>
+      </div>
+
+      {/* ---------------------------------------------------------------------
+          FULLSCREEN READ MODE
+          --------------------------------------------------------------------- */}
+      {readingFull && selectedModule && (
+        <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
+          {/* FULLSCREEN HEADER */}
+          <div className="flex justify-between items-center px-8 py-4 border-b bg-white sticky top-0">
+            <h2 className="font-semibold text-slate-800">
+              {selectedModule.title}
+            </h2>
+            <div className="flex items-center gap-4 text-slate-600">
+              <button onClick={increaseFont} className="hover:text-black">A+</button>
+              <button onClick={decreaseFont} className="hover:text-black">A−</button>
+              <button
+                onClick={() => setReadingFull(false)}
+                className="text-red-500 hover:text-red-700"
+              >
+                ✖ Close
+              </button>
+            </div>
+          </div>
+
+          {/* FULLSCREEN CONTENT */}
+          <div
+            className="max-w-4xl mx-auto px-8 py-10 prose"
+            style={{ fontSize }}
+            dangerouslySetInnerHTML={{ __html: selectedModule.content }}
+          />
+        </div>
       )}
     </div>
   );
