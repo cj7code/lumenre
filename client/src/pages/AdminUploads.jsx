@@ -1,4 +1,18 @@
-// Admin-only file manager with preview, multi-upload, delete & view-in-tab
+// ============================================================================
+// AdminUploads.jsx
+// ---------------------------------------------------------------------------
+// ADMIN-ONLY FILE MANAGER
+//
+// Key guarantees (DO NOT BREAK):
+// ✓ Files NEVER auto-download or auto-open on render
+// ✓ Files are fetched / opened ONLY after explicit user click
+// ✓ Uploading new files does NOT trigger existing files
+// ✓ Download counter increments only on intentional open
+//
+// IMPORTANT:
+// - Never render <img src={file.url}> or <iframe src={file.url}> by default
+// - Browsers auto-fetch src URLs, which causes auto-download bugs
+// ============================================================================
 
 import { useState } from "react";
 import api from "../api";
@@ -6,13 +20,22 @@ import { Link } from "react-router-dom";
 import CourseModuleSelector from "../components/CourseModuleSelector";
 
 export default function AdminUploads() {
+  // -------------------------------------------------------------------------
+  // STATE
+  // -------------------------------------------------------------------------
   const [moduleId, setModuleId] = useState("");
   const [filesToUpload, setFilesToUpload] = useState([]);
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [loadingFiles, setLoadingFiles] = useState(false);
 
-  // Load module files
+  // Holds a file explicitly selected for preview
+  // This prevents auto-loading previews during list render
+  const [previewFile, setPreviewFile] = useState(null);
+
+  // -------------------------------------------------------------------------
+  // LOAD FILES FOR MODULE
+  // -------------------------------------------------------------------------
   const loadFiles = async () => {
     if (!moduleId) return alert("Select a module first");
 
@@ -28,7 +51,9 @@ export default function AdminUploads() {
     }
   };
 
-  // Upload multiple files
+  // -------------------------------------------------------------------------
+  // MULTI-FILE UPLOAD
+  // -------------------------------------------------------------------------
   const uploadFile = async () => {
     if (!moduleId || filesToUpload.length === 0)
       return alert("Select module + files");
@@ -41,7 +66,10 @@ export default function AdminUploads() {
       await api.post(`/api/admin/modules/${moduleId}/upload`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
       alert("Upload successful");
+
+      // Reset file input + refresh list
       setFilesToUpload([]);
       loadFiles();
     } catch (err) {
@@ -52,7 +80,34 @@ export default function AdminUploads() {
     }
   };
 
-  // Delete file
+  // -------------------------------------------------------------------------
+  // OPEN FILE (INTENTIONAL ACTION ONLY)
+  // -------------------------------------------------------------------------
+  // IMPORTANT:
+  // - This function is ONLY called on explicit user click
+  // - We increment download stats here
+  // - We then open the file in a new tab
+  //
+  // Never auto-call this during render.
+  // -------------------------------------------------------------------------
+  const openFile = async (file) => {
+    try {
+      await api.post(
+        `/api/admin/modules/${moduleId}/files/${encodeURIComponent(
+          file.public_id
+        )}/download`
+      );
+    } catch (err) {
+      console.error("Failed to increment downloads", err);
+      // Do NOT block viewing if analytics fail
+    }
+
+    window.open(file.url, "_blank", "noopener,noreferrer");
+  };
+
+  // -------------------------------------------------------------------------
+  // DELETE FILE
+  // -------------------------------------------------------------------------
   const removeFile = async (publicId) => {
     if (!window.confirm("Delete this file?")) return;
 
@@ -68,23 +123,9 @@ export default function AdminUploads() {
     }
   };
 
-  // Open file in new tab + increment download counter
-  const openFile = async (file) => {
-    try {
-      await api.post(
-        `/api/admin/modules/${moduleId}/files/${encodeURIComponent(
-          file.public_id
-        )}/download`
-      );
-    } catch (err) {
-      console.error("Failed to increment downloads", err);
-      // don't block viewing
-    }
-
-    window.open(file.url, "_blank", "noopener,noreferrer");
-    // no refresh needed immediately; counter will update next reload
-  };
-
+  // -------------------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------------------
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -94,11 +135,11 @@ export default function AdminUploads() {
           to="/admin"
           className="text-sm text-primary underline hover:no-underline"
         >
-          ← Back to Admin Dashboard
+          ← Back to Dashboard
         </Link>
       </div>
 
-      {/* Upload Card */}
+      {/* MODULE SELECTOR + UPLOAD */}
       <div className="p-4 bg-white shadow rounded space-y-4">
         <CourseModuleSelector
           value={moduleId}
@@ -131,67 +172,31 @@ export default function AdminUploads() {
         </button>
       </div>
 
-      {/* File List */}
+      {/* FILE LIST */}
       <div>
         {files.length === 0 && !loadingFiles && (
           <p>No files for this module yet.</p>
         )}
 
         {files.map((file) => (
-          <FilePreview
+          <div
             key={file.public_id}
-            file={file}
-            onOpen={() => openFile(file)}
-            onDelete={() => removeFile(file.public_id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Single file preview card
-function FilePreview({ file, onOpen, onDelete }) {
-  const isImage = file.type?.startsWith("image/");
-  const isPDF = file.type === "application/pdf";
-
-  return (
-    <div className="p-4 border rounded mb-3 shadow-sm bg-white">
-      <div className="flex items-start justify-between">
-        {/* Left: Thumbnail / Preview */}
-        <div className="flex items-center gap-4">
-          {/* Image Preview */}
-          {isImage && (
-            <img
-              src={file.url}
-              alt={file.originalName || ""}
-              className="w-20 h-20 object-cover rounded border"
-            />
-          )}
-
-          {/* PDF Preview (small) */}
-          {isPDF && (
-            <iframe
-              src={file.url}
-              className="w-24 h-24 border rounded"
-              title={file.originalName || "PDF Preview"}
-            />
-          )}
-
-          {/* Other documents */}
-          {!isImage && !isPDF && (
-            <div className="w-20 h-20 flex items-center justify-center bg-gray-200 rounded text-gray-600 text-xs text-center p-1">
-              📄 {file.type?.split("/")[1] || "file"}
-            </div>
-          )}
-
-          {/* File Info */}
-          <div>
+            className="p-4 border rounded mb-3 shadow-sm bg-white"
+          >
+            {/* File name (does NOT auto-open) */}
             <button
-              onClick={onOpen}
-              className="text-primary underline block text-sm text-left"
+              onClick={() => setPreviewFile(file)}
+              className="text-primary underline block text-left"
             >
-              {file.originalName || "Open file"}
+              {file.originalName}
+            </button>
+
+            {/* Explicit open action */}
+            <button
+              onClick={() => openFile(file)}
+              className="text-sm underline mt-2"
+            >
+              Open in new tab
             </button>
 
             <p className="text-xs mt-1 text-gray-600">
@@ -199,17 +204,44 @@ function FilePreview({ file, onOpen, onDelete }) {
             </p>
 
             <p className="text-xs text-gray-500 break-all">{file.type}</p>
-          </div>
-        </div>
 
-        {/* Delete Button */}
-        <button
-          onClick={onDelete}
-          className="text-red-600 text-sm underline ml-4"
-        >
-          Delete
-        </button>
+            <button
+              onClick={() => removeFile(file.public_id)}
+              className="text-red-600 text-sm underline mt-2"
+            >
+              Delete
+            </button>
+          </div>
+        ))}
       </div>
+
+      {/* ON-DEMAND PREVIEW (NO AUTO-FETCH) */}
+      {previewFile && (
+        <div className="border p-4 rounded bg-white">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-semibold">{previewFile.originalName}</h3>
+            <button
+              onClick={() => setPreviewFile(null)}
+              className="text-sm underline"
+            >
+              Close preview
+            </button>
+          </div>
+
+          {/* PDF preview ONLY after explicit click */}
+          {previewFile.type === "application/pdf" ? (
+            <object
+              data={previewFile.url}
+              type="application/pdf"
+              className="w-full h-[400px]"
+            />
+          ) : (
+            <p className="text-sm text-gray-600">
+              Preview not available. Click “Open in new tab” to view.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
