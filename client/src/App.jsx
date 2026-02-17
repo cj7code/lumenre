@@ -37,7 +37,7 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 
 // Tutor Pages
 import TutorDashboard from "./pages/TutorDashboard";
-import TutorUploads from "./pages/TutorUploads";
+// import TutorUploads from "./pages/TutorUploads";
 
 // Student Page
 import StudentDashboard from "./pages/StudentDashboard";
@@ -115,7 +115,10 @@ export default function App() {
           {/* ------------------------------------------------------------- */}
           <Route path="/tutor" element={<TutorLayout />}>
             <Route index element={<TutorDashboard />} />
-            <Route path="uploads" element={<TutorUploads />} />
+            {/* <Route path="uploads" element={<TutorUploads />} /> */}
+            {/* 🔁 REUSE ADMIN PAGES */}
+            <Route path="uploads" element={<AdminUploads />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
           </Route>
 
           {/* ------------------------------------------------------------- */}
