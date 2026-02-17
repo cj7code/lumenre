@@ -19,6 +19,7 @@ import TiptapToolbar from "./TiptapToolbar";
 export default function ModuleContentEditor({ moduleId, basePath }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [fontSize, setFontSize] = useState("prose-base");
 
   // TipTap Editor Instance
   const editor = useEditor({
@@ -105,13 +106,46 @@ export default function ModuleContentEditor({ moduleId, basePath }) {
       {/* TOOLBAR */}
       <TiptapToolbar editor={editor} />
 
+      {/* FONT SIZE CONTROLS */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-medium">Font size:</span>
+
+        <button onClick={() => setFontSize("prose-sm")} className="px-2 py-1 border rounded">
+          Small
+        </button>
+
+        <button onClick={() => setFontSize("prose-base")} className="px-2 py-1 border rounded">
+          Normal
+        </button>
+
+        <button onClick={() => setFontSize("prose-lg")} className="px-2 py-1 border rounded">
+          Large
+        </button>
+      </div>
+
       {/* EDITOR */}
       <div
         className={`border rounded p-3 bg-white ${
           loading ? "opacity-60" : ""
         }`}
       >
-        <EditorContent editor={editor} />
+        <EditorContent
+          editor={editor}
+          className={`
+            prose
+            ${fontSize}
+            max-w-none
+            leading-relaxed
+            text-justify
+            prose-p:text-justify
+            text-gray-800
+            prose-p:text-gray-800
+            prose-li:text-gray-800
+            prose-strong:text-black
+            prose-headings:text-black
+            min-h-[300px]
+          `}
+        />
       </div>
 
       {/* SAVE BUTTON */}
