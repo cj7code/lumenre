@@ -140,7 +140,7 @@ export default function AdminUsers() {
             to="/admin"
             className="text-xs text-primary underline hover:no-underline"
           >
-            ← Back to Admin Dashboard
+            ← Back to Dashboard
           </Link>
         </div>
       </header>
