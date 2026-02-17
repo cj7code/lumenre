@@ -5,10 +5,12 @@
 //  ✓ Question types: mcq, short, sentence, matching, tf, essay
 //  ✓ Bottom-right "Add question" button
 //  ✓ List existing quizzes for this module (edit / delete)
+//  ✓ GIFT import (modal + parser)
 // -------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
 import api from "../api";
+import { parseGIFT } from "../utils/giftParser";
 
 const QUESTION_TYPES = [
   { value: "mcq", label: "Multiple Choice" },
@@ -24,7 +26,11 @@ function emptyQuestion(type = "mcq") {
     type,
     prompt: "",
     options:
-      type === "mcq" || type === "tf" ? ["", "", "", ""] : [],
+      type === "mcq"
+        ? ["", "", "", ""]
+        : type === "tf"
+        ? ["True", "False"]
+        : [],
     correctAnswer: "",
     marks: 1,
     meta: null,
@@ -39,12 +45,18 @@ export default function QuizBuilder({
   const [questions, setQuestions] = useState([emptyQuestion("mcq")]);
   const [saving, setSaving] = useState(false);
 
+  // GIFT import
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [giftText, setGiftText] = useState("");
+
   // quiz list for this module
   const [quizzes, setQuizzes] = useState([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(false);
   const [editingQuizId, setEditingQuizId] = useState(null);
 
+  // ---------------------------------------------------
   // Load quizzes for this module
+  // ---------------------------------------------------
   useEffect(() => {
     if (!moduleId) return;
     loadQuizzes();
@@ -61,6 +73,27 @@ export default function QuizBuilder({
       console.error("Failed to load quizzes", err);
     }
     setLoadingQuizzes(false);
+  };
+
+  // ---------------------------------------------------
+  // GIFT import (now correctly inside component)
+  // ---------------------------------------------------
+  const handleGiftImport = () => {
+    try {
+      const parsed = parseGIFT(giftText || "");
+      if (!parsed || parsed.length === 0) {
+        alert("No questions found in GIFT text.");
+        return;
+      }
+
+      setQuestions((prev) => [...prev, ...parsed]);
+      alert(`Imported ${parsed.length} questions.`);
+      setGiftText("");
+      setShowGiftModal(false);
+    } catch (e) {
+      console.error(e);
+      alert("Invalid GIFT format");
+    }
   };
 
   // ---------- question helpers ----------
@@ -135,10 +168,7 @@ export default function QuizBuilder({
         alert("Quiz updated.");
       } else {
         // create new quiz
-        await api.post(
-          `${basePath}/modules/${moduleId}/quizzes`,
-          payload
-        );
+        await api.post(`${basePath}/modules/${moduleId}/quizzes`, payload);
         alert("Quiz created.");
       }
 
@@ -189,7 +219,35 @@ export default function QuizBuilder({
 
   // ---------- UI ----------
   return (
-    <section className="p-6 bg-white shadow rounded space-y-6">
+    <section className="p-6 bg-white shadow rounded space-y-6 relative">
+      {/* GIFT Import Modal */}
+      {showGiftModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-4 rounded w-full max-w-lg space-y-3">
+            <h2 className="text-lg font-bold">Import GIFT</h2>
+
+            <textarea
+              rows={10}
+              className="w-full border rounded p-2"
+              placeholder="Paste GIFT text here..."
+              value={giftText}
+              onChange={(e) => setGiftText(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowGiftModal(false)}>Cancel</button>
+              <button
+                className="bg-primary text-white px-3 py-1 rounded"
+                onClick={handleGiftImport}
+              >
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header / title + GIFT button */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold">Quiz Builder</h2>
@@ -197,12 +255,20 @@ export default function QuizBuilder({
             Attach a quiz to this module. Students will see it in their
             module view.
           </p>
+          {editingQuizId && (
+            <span className="inline-block mt-1 text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700">
+              Editing existing quiz
+            </span>
+          )}
         </div>
-        {editingQuizId && (
-          <span className="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700">
-            Editing existing quiz
-          </span>
-        )}
+
+        <button
+          type="button"
+          className="text-xs bg-teal-700 text-white px-3 py-2 rounded shadow"
+          onClick={() => setShowGiftModal(true)}
+        >
+          Import GIFT
+        </button>
       </div>
 
       {/* Quiz title */}
@@ -233,9 +299,7 @@ export default function QuizBuilder({
                 <div className="flex items-center gap-2">
                   <select
                     value={type}
-                    onChange={(e) =>
-                      changeType(index, e.target.value)
-                    }
+                    onChange={(e) => changeType(index, e.target.value)}
                     className="border rounded px-2 py-1 text-xs"
                   >
                     {QUESTION_TYPES.map((t) => (
