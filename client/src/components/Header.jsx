@@ -63,9 +63,9 @@ export default function Header() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <header className="bg-[#0a5275] dark:bg-slate-900 text-white shadow-sm sticky top-0 z-50">
+    <header className="bg-brand dark:bg-slate-900 text-white shadow-sm sticky top-0 z-50">
       {/* ⭐ Updated spacing: max-w-7xl + px-2 (tighter edges) */}
-      <nav className="max-w-7xl mx-auto flex justify-between items-center py-5 px-2">
+      <nav className="max-w-7xl mx-auto flex justify-between items-center py-5 px-4 sm:px-6 lg:px-8">
 
         {/* LOGO */}
         <Link to="/" className="text-xl font-bold tracking-wide">
