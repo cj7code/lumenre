@@ -1,5 +1,8 @@
 // ============================================================================
 // TUTOR ROUTES
+// - Handles Tutor-level staff operations
+// - Tutors can create content, quizzes, drafts, uploads
+// - Tutors CANNOT delete modules or manage users
 // ============================================================================
 
 import express from "express";
@@ -7,10 +10,14 @@ import { staffAuth } from "../middleware/staffAuth.js";
 
 import Module from "../models/Module.js";
 
-// Cloudinary upload
+// ============================================================================
+// FILE UPLOAD MIDDLEWARE (Cloudinary)
+// ============================================================================
 import uploadToCloud from "../middleware/uploadToCloud.js";
 
-// File handlers
+// ============================================================================
+// MODULE FILE CONTROLLERS
+// ============================================================================
 import {
   uploadModuleFile,
   listModuleFiles,
@@ -18,13 +25,18 @@ import {
   incrementDownload,
 } from "../controllers/moduleUploadController.js";
 
-// Module controllers
+// ============================================================================
+// MODULE CONTROLLERS
+// ============================================================================
 import {
   createModule,
   listModulesByCourse,
+  updateModule,
 } from "../controllers/moduleController.js";
 
-// Draft controllers
+// ============================================================================
+// DRAFT CONTROLLERS (AI drafts)
+// ============================================================================
 import {
   createDraft,
   listDrafts,
@@ -33,81 +45,61 @@ import {
   deleteDraft,
 } from "../controllers/draftController.js";
 
-// Tutor quiz creation
-import { tutorCreateQuiz } from "../controllers/tutorQuizController.js";
+// ============================================================================
+// QUIZ CONTROLLERS (Tutor scope)
+// ============================================================================
+import {
+  createQuizForModule,
+  updateQuiz,
+  deleteQuiz,
+} from "../controllers/quizController.js";
 
 const router = express.Router();
 
-// ============================================================================
-// MODULE CREATION
-// ============================================================================
+/* ============================================================================
+   MODULE MANAGEMENT
+============================================================================ */
+
+// Create module (Tutor allowed)
 router.post("/modules", staffAuth, createModule);
 
-router.get("/courses/:courseId/modules", staffAuth, listModulesByCourse);
-
-// ============================================================================
-// FILE MANAGEMENT (Same as Admin)
-// ============================================================================
-router.post(
-  "/modules/:moduleId/upload",
-  staffAuth,
-  uploadToCloud,
-  uploadModuleFile
-);
-
-router.get("/modules/:moduleId/files", staffAuth, listModuleFiles);
-
-router.delete(
-  "/modules/:moduleId/files/:publicId",
-  staffAuth,
-  deleteModuleFile
-);
-
+// List modules by course (used by CourseModuleSelector)
 router.get(
-  "/modules/:moduleId/files/:publicId/download",
+  "/courses/:courseId/modules",
   staffAuth,
-  incrementDownload
+  listModulesByCourse
 );
 
-// ============================================================================
-// DRAFT MANAGEMENT
-// ============================================================================
-router.post("/drafts", staffAuth, uploadToCloud, createDraft);
-router.get("/drafts", staffAuth, listDrafts);
-router.get("/drafts/:id", staffAuth, getDraft);
-router.post("/drafts/:id/publish", staffAuth, publishDraft);
-router.delete("/drafts/:id", staffAuth, deleteDraft);
-
-// ============================================================================
-// QUIZ BUILDER
-// ============================================================================
-router.post(
-  "/modules/:moduleId/quizzes",
-  staffAuth,
-  tutorCreateQuiz
-);
-
-// ============================================================================
-// GET SINGLE MODULE
-// ============================================================================
+// Get single module (used by ModuleContentEditor)
 router.get("/modules/:moduleId", staffAuth, async (req, res) => {
   try {
     const mod = await Module.findById(req.params.moduleId)
       .populate("course", "title")
       .lean();
 
-    if (!mod) return res.status(404).json({ error: "Module not found" });
+    if (!mod) {
+      return res.status(404).json({ error: "Module not found" });
+    }
 
     res.json(mod);
   } catch (err) {
-    console.error("GET MODULE ERROR:", err);
+    console.error("TUTOR GET MODULE ERROR:", err);
     res.status(500).json({ error: "Failed to load module" });
   }
 });
 
-// ============================================================================
-// UPDATE MODULE CONTENT (Manual + AI)
-// ============================================================================
+/* ------------------------------------------------------------------
+   UPDATE MODULE METADATA (Tutor)
+   - Tutors can rename modules
+   - Tutors CANNOT delete modules
+------------------------------------------------------------------ */
+router.put(
+  "/modules/:moduleId",
+  staffAuth,
+  updateModule
+);
+
+// Update module content (TipTap / AI editor)
 router.put("/modules/:moduleId/content", staffAuth, async (req, res) => {
   try {
     const { content } = req.body;
@@ -118,30 +110,92 @@ router.put("/modules/:moduleId/content", staffAuth, async (req, res) => {
       { new: true }
     );
 
-    if (!updated)
+    if (!updated) {
       return res.status(404).json({ error: "Module not found" });
+    }
 
     res.json(updated);
   } catch (err) {
-    console.error("UPDATE MODULE CONTENT ERROR:", err);
+    console.error("TUTOR UPDATE MODULE CONTENT ERROR:", err);
     res.status(500).json({ error: "Failed to update module content" });
   }
 });
 
-// ============================================================================
-// FIX: Tutor listing modules always returns correct response
-// ============================================================================
-router.get("/courses/:courseId/modules", staffAuth, async (req, res) => {
-  try {
-    const modules = await Module.find({
-      course: req.params.courseId,
-    }).lean();
+/* ============================================================================
+   QUIZ MANAGEMENT (Tutor)
+============================================================================ */
 
-    res.json(modules);
-  } catch (err) {
-    console.error("TUTOR LIST MODULES ERROR:", err);
-    res.status(500).json({ error: "Failed to load modules" });
-  }
-});
+// Create quiz for module
+router.post(
+  "/modules/:moduleId/quizzes",
+  staffAuth,
+  createQuizForModule
+);
+
+// Update quiz
+router.put(
+  "/quizzes/:quizId",
+  staffAuth,
+  updateQuiz
+);
+
+// Delete quiz (Tutor allowed for own work)
+router.delete(
+  "/quizzes/:quizId",
+  staffAuth,
+  deleteQuiz
+);
+
+/* ============================================================================
+   DRAFT MANAGEMENT (Tutor)
+============================================================================ */
+
+// Create AI draft
+router.post("/drafts", staffAuth, uploadToCloud, createDraft);
+
+// List drafts
+router.get("/drafts", staffAuth, listDrafts);
+
+// Get single draft
+router.get("/drafts/:id", staffAuth, getDraft);
+
+// Publish draft
+router.post("/drafts/:id/publish", staffAuth, publishDraft);
+
+// Delete draft
+router.delete("/drafts/:id", staffAuth, deleteDraft);
+
+/* ============================================================================
+   MODULE FILE MANAGEMENT
+============================================================================ */
+
+// Upload teaching material
+router.post(
+  "/modules/:moduleId/upload",
+  staffAuth,
+  uploadToCloud,
+  uploadModuleFile
+);
+
+// List module files
+router.get(
+  "/modules/:moduleId/files",
+  staffAuth,
+  listModuleFiles
+);
+
+// Delete module file
+router.delete(
+  "/modules/:moduleId/files/:publicId",
+  staffAuth,
+  deleteModuleFile
+);
+
+// Track downloads (analytics)
+router.get(
+  "/modules/:moduleId/files/:publicId/download",
+  staffAuth,
+  incrementDownload
+);
 
 export default router;
