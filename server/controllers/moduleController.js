@@ -1,17 +1,17 @@
 // server/controllers/moduleController.js
 // -------------------------------------------------------
-// Handles module creation + listing modules for a course
-// Attachments are included so students can see notes
+// Handles module creation + listing + metadata update
 // -------------------------------------------------------
 
 import Module from "../models/Module.js";
 
-// Create a module/topic under a course
+/* ------------------------------------------------------------------
+   CREATE MODULE (unchanged – working logic)
+------------------------------------------------------------------ */
 export const createModule = async (req, res) => {
   try {
     const { courseId, title, content } = req.body;
 
-    const Module = (await import("../models/Module.js")).default;
     const Course = (await import("../models/Course.js")).default;
 
     const course = await Course.findById(courseId);
@@ -23,7 +23,7 @@ export const createModule = async (req, res) => {
       course: courseId,
     });
 
-    // 🔥 IMPORTANT: Link module to course
+    // Link module to course
     course.modules.push(mod._id);
     await course.save();
 
@@ -34,18 +34,44 @@ export const createModule = async (req, res) => {
   }
 };
 
-// List all modules under a course (attachments INCLUDED)
+/* ------------------------------------------------------------------
+   LIST MODULES BY COURSE (unchanged – working logic)
+------------------------------------------------------------------ */
 export const listModulesByCourse = async (req, res) => {
   try {
-    const Module = (await import("../models/Module.js")).default;
-
-    const modules = await Module.find({ course: req.params.courseId })
-      .lean(); // includes attachments
-
+    const modules = await Module.find({ course: req.params.courseId }).lean();
     res.json(modules);
   } catch (err) {
-    console.error("LIST MODULES BY COURSE ERROR:", err);
+    console.error("LIST MODULES ERROR:", err);
     res.status(500).json({ error: "Failed to load modules" });
   }
 };
 
+/* ------------------------------------------------------------------
+   UPDATE MODULE METADATA (NEW)
+   - Used by ModuleCreator.jsx when renaming modules
+   - DOES NOT touch module content
+------------------------------------------------------------------ */
+export const updateModule = async (req, res) => {
+  try {
+    const { title, courseId } = req.body;
+
+    const updated = await Module.findByIdAndUpdate(
+      req.params.moduleId,
+      {
+        ...(title && { title }),
+        ...(courseId && { course: courseId }),
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Module not found" });
+    }
+
+    res.json({ module: updated });
+  } catch (err) {
+    console.error("UPDATE MODULE ERROR:", err);
+    res.status(500).json({ error: "Failed to update module" });
+  }
+};
