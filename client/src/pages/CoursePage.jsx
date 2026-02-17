@@ -73,7 +73,7 @@ export default function CoursePage() {
       {/* MODULE LIST */}
       {/* ---------------------------------------------- */}
       <section>
-        <h2 className="text-xl font-semibold mb-3">Modules</h2>
+        <h2 className="text-xl font-semibold mb-3 dark:text-white">Modules</h2>
 
         {course.modules.length === 0 && (
           <p classname="text-slate-500 text-sm">
