@@ -4,16 +4,20 @@ import BottomNav from "./BottomNav";
 export default function Layout({ children }) {
   return (
     <div className="flex-1 w-full pb-16 md:pb-0">
-      
-      {/* Global page wrapper */}
-      <div className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 w-full">
-        {children}
+
+      {/* Global horizontal gutter */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 w-full">
+
+        {/* Page content */}
+        <div className="py-4 md:py-6">
+          {children}
+        </div>
+
+        {/* Footer / Mobile Nav stays aligned */}
+        <BottomNav />
       </div>
 
       <BackToTop />
-
-      {/* Mobile navigation for students */}
-      <BottomNav />
     </div>
   );
 }
