@@ -3,8 +3,8 @@ import { Facebook, Twitter, Instagram, Github } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="bg-[#0a5275] dark:bg-slate-900 text-slate-300 py-2 border-t border-slate-700 mt-auto">
-      <div className="max-w-7xl mx-auto px-2 flex flex-col md:flex-row justify-between items-center gap-3">
+    <footer className="bg-brand dark:bg-slate-900 text-slate-300 py-2 border-t border-slate-700 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-3">
 
         {/* Branding */}
         <div className="text-center md:text-left">
