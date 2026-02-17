@@ -8,8 +8,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#0f766e', // teal
-        accent: '#001f3f',  // navy
+        brand: '#0a5275',   // ⭐ single source of truth
+        primary: '#0a5275', // alias (optional)
+        accent: '#001f3f',  // deep navy (keep)
       },
       boxShadow: {
         soft: '0 2px 8px rgba(0, 0, 0, 0.08)',
@@ -20,5 +21,7 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require("@tailwindcss/typography"),
+  ],
 };
